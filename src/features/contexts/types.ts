@@ -1,4 +1,4 @@
-import { ContextType, VocabularyContext } from '../../types';
+import { ContextType} from '../../types';
 
 export interface EditContextFormData {
   context_name: string;

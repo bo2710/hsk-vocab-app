@@ -1,4 +1,3 @@
-import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../providers/AuthProvider';
 import MainLayout from '../../components/layout/MainLayout'; // Đã sửa đường dẫn thành lùi 2 cấp (../../)

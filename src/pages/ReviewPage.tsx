@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useReviewSession, ReviewMode } from '../features/review/hooks/useReviewSession';
+import { useReviewSession} from '../features/review/hooks/useReviewSession';
 import { ReviewProgress } from '../components/review/ReviewProgress';
 import { ReviewCard } from '../components/review/ReviewCard';
 import { VocabularyItem } from '../types/models';
