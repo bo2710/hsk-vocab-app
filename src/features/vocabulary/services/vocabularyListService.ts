@@ -6,9 +6,9 @@ export const getVocabularyList = async (): Promise<VocabularyItem[]> => {
   const cached = await getAllVocabulary();
 
   const fetchRemote = async () => {
-    // Sử dụng trực tiếp Supabase Client để tránh lỗi sai tên hàm Repository
+    // SỬA LỖI DB: Sử dụng đúng tên bảng 'vocabulary_items' thay vì 'vocabulary'
     const { data, error } = await supabase
-      .from('vocabulary')
+      .from('vocabulary_items')
       .select('*')
       .order('created_at', { ascending: false });
 
