@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../providers/AuthProvider';
-import MainLayout from '../../components/layout/MainLayout'; // Đã sửa đường dẫn thành lùi 2 cấp (../../)
+// SỬA TẬN GỐC: Thêm ngoặc nhọn {} để khớp với Named Export bên MainLayout
+import { MainLayout } from '../../components/layout/MainLayout'; 
 
 export default function ProtectedRoute() {
   const { isAuthenticated, isLoading } = useAuth();
