@@ -1,56 +1,89 @@
 import { vocabularyRepository } from '../../../lib/supabase/repositories/vocabularyRepository';
-import { VocabularyItem } from '../../../types/models';
+import { VocabularyItem, VocabularyContext } from '../../../types/models';
 import { putVocabulary, getVocabulary, deleteVocabulary } from '../../../lib/indexeddb/vocabularyStore';
 import { addOperation } from '../../../lib/indexeddb/operationQueueStore';
+import { supabase } from '../../../lib/supabase/client';
 
 export const updateVocabularyWord = async (
   id: string,
-  input: Partial<VocabularyItem>
+  input: Partial<VocabularyItem> & { contexts?: Partial<VocabularyContext>[] }
 ): Promise<VocabularyItem> => {
   
-  // Validate rỗng an toàn
-  if (input.hanzi !== undefined && input.hanzi !== null && typeof input.hanzi === 'string' && input.hanzi.trim() === '') {
+  const { contexts, ...wordInput } = input;
+
+  if (wordInput.hanzi !== undefined && wordInput.hanzi !== null && typeof wordInput.hanzi === 'string' && wordInput.hanzi.trim() === '') {
     throw new Error('Chữ Hán (Hanzi) không được để trống.');
   }
-  if (input.meaning_vi !== undefined && input.meaning_vi !== null && typeof input.meaning_vi === 'string' && input.meaning_vi.trim() === '') {
+  if (wordInput.meaning_vi !== undefined && wordInput.meaning_vi !== null && typeof wordInput.meaning_vi === 'string' && wordInput.meaning_vi.trim() === '') {
     throw new Error('Nghĩa tiếng Việt không được để trống.');
   }
 
-  // Chuẩn hóa input
-  const normalizedInput: Record<string, any> = { ...input };
+  const normalizedInput: Record<string, any> = { ...wordInput };
   if (normalizedInput.hanzi) {
     normalizedInput.hanzi_normalized = normalizedInput.hanzi.trim().replace(/\s+/g, '');
   }
 
-  // ========================================================
-  // 1. LOCAL-FIRST: LUÔN LƯU VÀO MÁY TRƯỚC TIÊN
-  // ========================================================
+  // 1. LẤY THÔNG TIN USER (Bắt buộc để lưu context chuẩn xác)
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // 2. XỬ LÝ CONTEXTS CHUẨN XÁC
+  if (contexts && Array.isArray(contexts) && user) {
+    const mappedContexts = contexts.map(c => ({
+      // Phải trải dữ liệu c ra trước để lấy đúng field
+      ...c,
+      id: c.id || crypto.randomUUID(),
+      vocabulary_id: id,
+      user_id: user.id, // Bắt buộc phải có user_id nếu DB yêu cầu
+      context_name: c.context_name || '',
+      context_type: c.context_type || 'sentence',
+      context_note: c.context_note || null,
+      learned_at: c.learned_at || new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }));
+
+    try {
+      // Dùng lệnh upsert trực tiếp.
+      // Lưu ý: Không dùng onConflict nếu DB của bạn không set up UNIQUE constraint,
+      // Mặc định Supabase sẽ upsert dựa trên Primary Key (id) nếu đã có.
+      const { error: ctxError } = await supabase
+        .from('vocabulary_contexts')
+        .upsert(mappedContexts);
+        
+      if (ctxError) {
+        console.error("Lỗi lưu ngữ cảnh vào Supabase:", ctxError);
+        throw ctxError;
+      }
+    } catch (err: any) {
+      await addOperation({
+        operationType: 'UPDATE',
+        entityType: 'CONTEXT', 
+        payload: { vocabulary_id: id, contexts: mappedContexts }
+      });
+    }
+  }
+
+  // 3. LOCAL-FIRST
   const cached = await getVocabulary(id);
   if (!cached) {
     throw new Error('Từ vựng này không còn tồn tại trên thiết bị. Vui lòng tải lại trang.');
   }
 
-  // Tạo bản nháp cập nhật mới nhất
   const updatedItem: VocabularyItem = { 
     ...cached, 
     ...normalizedInput, 
     updated_at: new Date().toISOString() 
   } as VocabularyItem;
 
-  // Ép lưu thẳng xuống IndexedDB để đảm bảo UI không bao giờ bị mất dữ liệu
   await putVocabulary(updatedItem);
 
-  // ========================================================
-  // 2. REMOTE-SYNC: ĐỒNG BỘ LÊN MÂY (Hoặc ném vào Queue)
-  // ========================================================
+  // 4. REMOTE-SYNC CHO TỪ VỰNG
   try {
     const result = await vocabularyRepository.updateVocabulary(id, normalizedInput);
     
     if (result.error) {
-      throw result.error; // Cố tình ném lỗi để nhảy vào catch bên dưới
+      throw result.error; 
     }
     
-    // Nếu mây nhận thành công, lưu đè lại bản mây trả về cho chắc cú
     if (result.data) {
       await putVocabulary(result.data);
       return result.data;
@@ -58,21 +91,17 @@ export const updateVocabularyWord = async (
     
     return updatedItem;
   } catch (error: any) {
-    // BẤT KỂ LÀ LỖI GÌ (mất mạng, server sập, hay Supabase không tìm thấy dòng), 
-    // ta cũng vứt vào hàng đợi Sync ngầm, KHÔNG chặn giao diện của người dùng.
     await addOperation({
       operationType: 'UPDATE',
       entityType: 'VOCABULARY',
       payload: { id, updates: normalizedInput }
     });
     
-    // Vẫn trả về kết quả thành công cho màn hình EditWordPage
     return updatedItem;
   }
 };
 
 export const deleteVocabularyWord = async (id: string): Promise<boolean> => {
-  // LOCAL-FIRST: Xóa rễ ở máy tính/điện thoại ngay lập tức
   await deleteVocabulary(id);
 
   try {
@@ -80,7 +109,6 @@ export const deleteVocabularyWord = async (id: string): Promise<boolean> => {
     if (result.error) throw result.error;
     return true;
   } catch (error: any) {
-    // Bất kể mây có lỗi gì, ném vào Queue và vẫn báo thành công cho người dùng
     await addOperation({
       operationType: 'DELETE',
       entityType: 'VOCABULARY',

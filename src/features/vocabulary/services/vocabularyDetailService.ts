@@ -14,8 +14,6 @@ export const getVocabularyDetail = async (id: string): Promise<VocabularyDetailR
   let word: VocabularyItem | null = null;
 
   // 1. LOCAL-FIRST: Cứu tinh của Offline!
-  // Moi từ vựng từ bộ nhớ tạm IndexedDB ra trước. 
-  // Rất quan trọng nếu bạn vừa tạo/sửa từ vựng mà nó chưa kịp đồng bộ lên mây.
   try {
     const localWord = await getVocabulary(id);
     if (localWord) {
@@ -51,17 +49,28 @@ export const getVocabularyDetail = async (id: string): Promise<VocabularyDetailR
     .order('learned_at', { ascending: false });
 
   if (contextsError) {
-    throw new Error(contextsError.message);
+    // Không throw error để tránh sập UI khi offline (giữ cho word vẫn hiển thị được)
+    console.warn('Lỗi tải ngữ cảnh từ Supabase:', contextsError.message);
   }
 
-  // 4. LỌC MỀM BẰNG JAVASCRIPT: Loại bỏ bóng ma ngữ cảnh đã xóa
-  // Dùng filter JS an toàn 100%, không sợ Supabase bắt bẻ lỗi sai tên cột
-  const activeContexts = (contextsData || []).filter(
-    (ctx: any) => !ctx.deleted_at && ctx.is_archived !== true
-  );
+  // 4. LỌC MỀM VÀ FIX CONTRACT MISMATCH CHO UI
+  const activeContexts = (contextsData || [])
+    .filter((ctx: any) => !ctx.deleted_at && ctx.is_archived !== true)
+    .map((ctx: any) => ({
+      ...ctx,
+      // Map dự phòng để tương thích với các component UI dùng key cũ
+      source: ctx.context_name, 
+      type: ctx.context_type    
+    }));
+
+  // Khôi phục logic: Nhúng contexts ngược lại vào word để Form Edit và Detail đọc được (Unified Form Contract)
+  const wordWithContexts = {
+    ...word,
+    contexts: activeContexts
+  };
 
   return {
-    word,
+    word: wordWithContexts as VocabularyItem,
     contexts: activeContexts as VocabularyContext[],
   };
 };

@@ -7,6 +7,18 @@ import { useAddVocabulary } from '../../features/vocabulary/hooks/useAddVocabula
 import { AddVocabularyFormData } from '../../features/vocabulary/types';
 import { CONTEXT_TYPES } from '../../lib/constants';
 
+// BẢN ĐỒ DỊCH TỪ TYPE TIẾNG ANH SANG TIẾNG VIỆT ĐỂ CHỌN THỂ LOẠI
+const CONTEXT_TYPE_LABELS: Record<string, string> = {
+  sentence: 'Câu (Sentence)',
+  paragraph: 'Đoạn văn (Paragraph)',
+  video: 'Video',
+  conversation: 'Hội thoại (Conversation)',
+  article: 'Bài viết (Article)',
+  book: 'Sách (Book)',
+  audio: 'Audio',
+  other: 'Khác (Other)'
+};
+
 const initialFormState: AddVocabularyFormData = {
   hanzi: '',
   pinyin: '',
@@ -74,7 +86,6 @@ export const AddWordForm: React.FC = () => {
     const success = await submitContextToExisting(formData);
     if (success) {
       setFormData(initialFormState);
-      // Để isSuccess hiện ra trước, useEffect ở trên sẽ tự đóng Modal
     }
   };
 
@@ -216,7 +227,9 @@ export const AddWordForm: React.FC = () => {
                 className="w-full p-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-gray-100 transition-shadow"
               >
                 {CONTEXT_TYPES.map(type => (
-                  <option key={type} value={type} className="dark:bg-gray-900">{type}</option>
+                  <option key={type} value={type} className="dark:bg-gray-900">
+                    {CONTEXT_TYPE_LABELS[type] || type}
+                  </option>
                 ))}
               </select>
             </div>
