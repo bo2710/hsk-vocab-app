@@ -6,17 +6,15 @@ import { useVocabularyFilters } from '../features/vocabulary/hooks/useVocabulary
 import { VocabularyList } from '../components/vocabulary/VocabularyList';
 import { SearchBar } from '../components/ui/SearchBar';
 import { FilterBar } from '../components/ui/FilterBar';
+import { bulkDeleteVocabularyWords } from '../features/vocabulary/services/vocabularyEditService';
 
 export const VocabularyPage: React.FC = () => {
   const navigate = useNavigate();
-  // Lấy dữ liệu toàn bộ từ db thông qua hook
   const { data: items = [], isLoading, error } = useVocabularyList();
   
-  // Áp dụng Text Search cục bộ
   const [searchQuery, setSearchQuery] = useState('');
   const { filteredItems: searchedItems } = useVocabularySearch(items, searchQuery);
 
-  // Áp dụng Lọc và Sắp xếp cục bộ lên tập dữ liệu đã search
   const { 
     filters, setFilters, 
     sort, setSort, 
@@ -25,44 +23,133 @@ export const VocabularyPage: React.FC = () => {
     isFilterActive 
   } = useVocabularyFilters(searchedItems);
 
-  // Trạng thái tổng hợp xem người dùng có đang thao tác bất kỳ công cụ tìm kiếm/lọc nào không
+  // ==================================================
+  // STATE MỚI: QUẢN LÝ CHẾ ĐỘ CHỌN & XÓA HÀNG LOẠT
+  // ==================================================
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const isSearchOrFilterActive = searchQuery.trim().length > 0 || isFilterActive;
 
-  // Ghi log ẩn thay vì ném lỗi thô ra UI cho người dùng thấy
   if (error) {
     console.warn("Lỗi tải kho từ (Đã bị ẩn trên UI):", error);
   }
 
+  // Bật/Tắt chế độ chọn
+  const handleToggleSelectMode = () => {
+    setIsSelectMode(!isSelectMode);
+    setSelectedIds([]); // Thoát là reset các mục đã chọn
+  };
+
+  // Toggle chọn một từ vựng
+  const handleToggleSelectWord = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  // Nút Chọn tất cả
+  const handleSelectAll = () => {
+    if (selectedIds.length === finalItems.length && finalItems.length > 0) {
+      setSelectedIds([]); // Bỏ chọn hết
+    } else {
+      setSelectedIds(finalItems.map(item => item.id)); // Chọn tất cả item đang hiển thị
+    }
+  };
+
+  // Xử lý Xóa Hàng Loạt
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`Bạn có chắc chắn muốn XÓA VĨNH VIỄN ${selectedIds.length} từ vựng đã chọn không? Hành động này không thể hoàn tác.`)) return;
+
+    setIsDeleting(true);
+    try {
+      await bulkDeleteVocabularyWords(selectedIds);
+      // Ép tải lại trang ngay lập tức để làm sạch hoàn toàn cache và UI (tránh zombie)
+      window.location.reload(); 
+    } catch (err) {
+      alert("Đã xảy ra lỗi khi xóa.");
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col space-y-4 p-4 md:p-6 max-w-7xl mx-auto animate-fade-in">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0 mb-2">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Kho từ vựng</h1>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0 mb-2 gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white whitespace-nowrap">Kho từ vựng</h1>
         
-        <div className="w-full sm:w-80">
-          <SearchBar
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Tìm kiếm bằng Hanzi, Pinyin, nghĩa..."
-          />
+        <div className="flex flex-row w-full md:w-auto items-center gap-2">
+          <div className="flex-1 md:w-80">
+            <SearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Tìm kiếm bằng Hanzi, Pinyin, nghĩa..."
+            />
+          </div>
+          
+          {/* NÚT BẬT CHẾ ĐỘ CHỌN NHIỀU */}
+          <button
+            onClick={handleToggleSelectMode}
+            className={`p-2.5 rounded-xl border transition-colors shrink-0 shadow-sm ${
+              isSelectMode 
+                ? 'bg-primary-100 border-primary-500 text-primary-700 dark:bg-primary-900/40 dark:border-primary-500 dark:text-primary-400' 
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'
+            }`}
+            title="Chọn nhiều"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+          </button>
         </div>
       </div>
 
-      {/* Cụm thanh công cụ Filter & Sort */}
-      <FilterBar 
-        filters={filters}
-        setFilters={setFilters}
-        sort={sort}
-        setSort={setSort}
-        onClear={() => {
-          clearFilters();
-          setSearchQuery(''); // Xóa tiện lợi cả thanh search nếu người dùng bấm "Xóa bộ lọc"
-        }}
-        isActive={isSearchOrFilterActive}
-      />
+      {/* THANH CÔNG CỤ DÀNH RIÊNG CHO CHẾ ĐỘ CHỌN */}
+      {isSelectMode ? (
+        <div className="bg-primary-50/80 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-sm animate-slide-up">
+          <label className="flex items-center gap-3 cursor-pointer pl-2">
+            <input 
+              type="checkbox" 
+              checked={selectedIds.length === finalItems.length && finalItems.length > 0} 
+              onChange={handleSelectAll} 
+              className="w-5 h-5 rounded text-primary-600 border-gray-300 focus:ring-primary-500 bg-white dark:bg-gray-800" 
+            />
+            <span className="text-sm font-semibold text-primary-800 dark:text-primary-300">
+              Đã chọn {selectedIds.length} / {finalItems.length}
+            </span>
+          </label>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={handleToggleSelectMode} 
+              disabled={isDeleting} 
+              className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 transition-colors"
+            >
+              Hủy
+            </button>
+            <button 
+              onClick={handleBulkDelete} 
+              disabled={selectedIds.length === 0 || isDeleting} 
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors shadow-sm"
+            >
+              {isDeleting ? 'Đang xóa...' : 'Xóa đã chọn'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <FilterBar 
+          filters={filters}
+          setFilters={setFilters}
+          sort={sort}
+          setSort={setSort}
+          onClear={() => {
+            clearFilters();
+            setSearchQuery(''); 
+          }}
+          isActive={isSearchOrFilterActive}
+        />
+      )}
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm min-h-[500px] p-4 md:p-6 border border-gray-100 dark:border-gray-700">
         
-        {/* NÂNG CẤP UI: Thay thế báo lỗi thô bằng Giao diện "Chưa có từ vựng" khi mảng rỗng */}
         {!isLoading && items.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center space-y-4 animate-fade-in">
             <div className="w-24 h-24 bg-primary-50 dark:bg-primary-900/20 text-primary-500 rounded-full flex items-center justify-center mb-2 shadow-inner">
@@ -81,8 +168,12 @@ export const VocabularyPage: React.FC = () => {
           <VocabularyList
             items={finalItems}
             isLoading={isLoading}
-            error={null} // Cố tình ép null để component con không bao giờ quăng bảng lỗi đỏ lòm
+            error={null} 
             hasActiveFilters={isSearchOrFilterActive}
+            // Props truyền xuống cho chế độ chọn
+            isSelectMode={isSelectMode}
+            selectedIds={selectedIds}
+            onToggleSelect={handleToggleSelectWord}
           />
         )}
         

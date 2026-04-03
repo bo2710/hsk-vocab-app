@@ -6,14 +6,30 @@ import { deleteVocabularyWord } from '../../features/vocabulary/services/vocabul
 
 interface VocabularyCardProps {
   item: VocabularyItem;
+  // Props cho chế độ chọn nhiều
+  isSelectMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
-const VocabularyCardComponent: React.FC<VocabularyCardProps> = ({ item }) => {
+const VocabularyCardComponent: React.FC<VocabularyCardProps> = ({ 
+  item, 
+  isSelectMode = false, 
+  isSelected = false, 
+  onToggleSelect 
+}) => {
   const navigate = useNavigate();
   const [isDeleted, setIsDeleted] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleCardClick = (e: React.MouseEvent) => {
+    // Nếu đang ở chế độ chọn, click vào card sẽ đánh dấu/bỏ đánh dấu
+    if (isSelectMode) {
+      onToggleSelect?.();
+      return;
+    }
+
+    // Nếu không, click bình thường sẽ chuyển sang trang chi tiết (bỏ qua nếu bấm vào nút phát âm)
     if ((e.target as HTMLElement).closest('button')) {
       return;
     }
@@ -25,7 +41,6 @@ const VocabularyCardComponent: React.FC<VocabularyCardProps> = ({ item }) => {
     if (window.confirm(`Bạn có chắc muốn xóa nhanh từ "${item.hanzi}" không?`)) {
       setIsDeleting(true);
       try {
-        // Dùng service đã nâng cấp để xóa sạch bóng ở cả mây và local
         await deleteVocabularyWord(item.id);
         setIsDeleted(true); 
       } catch (err) {
@@ -57,19 +72,40 @@ const VocabularyCardComponent: React.FC<VocabularyCardProps> = ({ item }) => {
   return (
     <div 
       onClick={handleCardClick}
-      className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-4 hover:shadow-md dark:hover:border-gray-600 transition-all cursor-pointer group relative overflow-hidden ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
+      className={`rounded-lg shadow-sm p-4 transition-all cursor-pointer group relative overflow-hidden flex flex-col h-full ${
+        isDeleting ? 'opacity-50 pointer-events-none' : ''
+      } ${
+        isSelected 
+          ? 'bg-primary-50 border-2 border-primary-500 dark:bg-primary-900/30' 
+          : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:shadow-md dark:hover:border-gray-600'
+      }`}
     >
+      {/* CHECKBOX DÀNH CHO MULTI-SELECT */}
+      {isSelectMode && (
+        <div className="absolute top-3 right-3 z-10">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            readOnly
+            className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 cursor-pointer pointer-events-none bg-white dark:bg-gray-900"
+          />
+        </div>
+      )}
+
       {renderStatusBadge()}
 
-      <button 
-        onClick={handleQuickDelete}
-        className="absolute top-3 right-3 p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded opacity-0 group-hover:opacity-100 transition-all"
-        title="Xóa nhanh"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-      </button>
+      {/* NÚT XÓA NHANH (Ẩn đi khi đang bật chế độ chọn nhiều) */}
+      {!isSelectMode && (
+        <button 
+          onClick={handleQuickDelete}
+          className="absolute top-3 right-3 p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded opacity-0 group-hover:opacity-100 transition-all"
+          title="Xóa nhanh"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+        </button>
+      )}
 
-      <div className="flex justify-between items-start mb-2 pr-6 mt-3">
+      <div className="flex justify-between items-start mb-2 pr-8 mt-3">
         <div className="flex items-center gap-3">
           <h3 className="text-2xl font-bold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
             {item.hanzi}
@@ -82,7 +118,7 @@ const VocabularyCardComponent: React.FC<VocabularyCardProps> = ({ item }) => {
       </div>
       
       <p className="text-sm text-primary-600 dark:text-primary-400 font-medium mb-1">{item.pinyin}</p>
-      <p className="text-gray-800 dark:text-gray-200 font-medium mb-3 line-clamp-1" title={item.meaning_vi}>{item.meaning_vi}</p>
+      <p className="text-gray-800 dark:text-gray-200 font-medium mb-3 line-clamp-1 flex-1" title={item.meaning_vi}>{item.meaning_vi}</p>
       
       <div className="flex justify-between items-end mt-2">
         <div className="flex flex-wrap gap-1 flex-1">
@@ -104,8 +140,11 @@ const VocabularyCardComponent: React.FC<VocabularyCardProps> = ({ item }) => {
 };
 
 export const VocabularyCard = memo(VocabularyCardComponent, (prevProps, nextProps) => {
-  // Chỉ render lại nếu ID thay đổi hoặc thời gian cập nhật thay đổi (hoặc trạng thái thay đổi để an toàn)
+  // RẤT QUAN TRỌNG: Component memo phải check thêm prop isSelectMode và isSelected
+  // Nếu không nó sẽ không đổi mầu thẻ sang mầu xanh/đánh dấu checkbox khi người dùng click
   return prevProps.item.id === nextProps.item.id && 
          prevProps.item.updated_at === nextProps.item.updated_at &&
-         prevProps.item.status === nextProps.item.status;
+         prevProps.item.status === nextProps.item.status &&
+         prevProps.isSelectMode === nextProps.isSelectMode &&
+         prevProps.isSelected === nextProps.isSelected;
 });

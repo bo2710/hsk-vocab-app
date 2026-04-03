@@ -23,17 +23,16 @@ export const updateVocabularyWord = async (
     normalizedInput.hanzi_normalized = normalizedInput.hanzi.trim().replace(/\s+/g, '');
   }
 
-  // 1. LẤY THÔNG TIN USER (Bắt buộc để lưu context chuẩn xác)
+  // 1. LẤY THÔNG TIN USER
   const { data: { user } } = await supabase.auth.getUser();
 
   // 2. XỬ LÝ CONTEXTS CHUẨN XÁC
   if (contexts && Array.isArray(contexts) && user) {
     const mappedContexts = contexts.map(c => ({
-      // Phải trải dữ liệu c ra trước để lấy đúng field
       ...c,
       id: c.id || crypto.randomUUID(),
       vocabulary_id: id,
-      user_id: user.id, // Bắt buộc phải có user_id nếu DB yêu cầu
+      user_id: user.id,
       context_name: c.context_name || '',
       context_type: c.context_type || 'sentence',
       context_note: c.context_note || null,
@@ -42,9 +41,6 @@ export const updateVocabularyWord = async (
     }));
 
     try {
-      // Dùng lệnh upsert trực tiếp.
-      // Lưu ý: Không dùng onConflict nếu DB của bạn không set up UNIQUE constraint,
-      // Mặc định Supabase sẽ upsert dựa trên Primary Key (id) nếu đã có.
       const { error: ctxError } = await supabase
         .from('vocabulary_contexts')
         .upsert(mappedContexts);
@@ -115,5 +111,32 @@ export const deleteVocabularyWord = async (id: string): Promise<boolean> => {
       payload: { id }
     });
     return true; 
+  }
+};
+
+// =========================================================
+// MỚI: HÀM XÓA HÀNG LOẠT (CẦN THIẾT CHO VOCABULARY PAGE)
+// =========================================================
+export const bulkDeleteVocabularyWords = async (ids: string[]): Promise<boolean> => {
+  // 1. Xóa cứng toàn bộ trên LocalDB ngay lập tức
+  for (const id of ids) {
+    await deleteVocabulary(id);
+  }
+
+  try {
+    // 2. Dùng in() để Xóa cứng (delete) một cục trên Supabase
+    const { error } = await supabase.from('vocabulary_items').delete().in('id', ids);
+    if (error) throw error;
+    return true;
+  } catch (error: any) {
+    // 3. Đẩy từng ID vào hàng đợi nếu mất mạng (Đảm bảo Type-safe với 'DELETE')
+    for (const id of ids) {
+      await addOperation({
+        operationType: 'DELETE',
+        entityType: 'VOCABULARY',
+        payload: { id }
+      });
+    }
+    return true;
   }
 };

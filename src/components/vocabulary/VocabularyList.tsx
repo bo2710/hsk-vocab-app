@@ -7,6 +7,10 @@ interface VocabularyListProps {
   isLoading: boolean;
   error: Error | null;
   hasActiveFilters?: boolean;
+  // Các props cho chế độ chọn nhiều
+  isSelectMode?: boolean;
+  selectedIds?: string[];
+  onToggleSelect?: (id: string) => void;
 }
 
 export const VocabularyList: React.FC<VocabularyListProps> = ({
@@ -14,6 +18,9 @@ export const VocabularyList: React.FC<VocabularyListProps> = ({
   isLoading,
   error,
   hasActiveFilters = false,
+  isSelectMode = false,
+  selectedIds = [],
+  onToggleSelect
 }) => {
   if (isLoading) {
     return (
@@ -38,8 +45,8 @@ export const VocabularyList: React.FC<VocabularyListProps> = ({
 
   if (items.length === 0) {
     return (
-      <div className="p-12 text-center bg-gray-50 rounded-lg border border-gray-200 border-dashed">
-        <p className="text-gray-500">
+      <div className="p-12 text-center bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 border-dashed">
+        <p className="text-gray-500 dark:text-gray-400">
           {hasActiveFilters
             ? 'Không tìm thấy từ vựng nào phù hợp với tìm kiếm hoặc bộ lọc của bạn.'
             : 'Danh sách từ vựng đang trống. Hãy thêm từ mới để bắt đầu học!'}
@@ -51,7 +58,13 @@ export const VocabularyList: React.FC<VocabularyListProps> = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {items.map((item) => (
-        <VocabularyCard key={item.id} item={item} />
+        <VocabularyCard 
+          key={item.id} 
+          item={item} 
+          isSelectMode={isSelectMode}
+          isSelected={selectedIds.includes(item.id)}
+          onToggleSelect={() => onToggleSelect?.(item.id)}
+        />
       ))}
     </div>
   );

@@ -6,10 +6,11 @@ export const getVocabularyList = async (): Promise<VocabularyItem[]> => {
   const cached = await getAllVocabulary();
 
   const fetchRemote = async () => {
-    // SỬA LỖI DB: Sử dụng đúng tên bảng 'vocabulary_items' thay vì 'vocabulary'
+    // Nâng cấp: Lọc bỏ những từ đã từng bị xóa mềm (nếu có tồn đọng) để diệt trừ zombie
     const { data, error } = await supabase
       .from('vocabulary_items')
       .select('*')
+      .is('deleted_at', null) 
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -24,12 +25,10 @@ export const getVocabularyList = async (): Promise<VocabularyItem[]> => {
     return [];
   };
 
-  // Stale-while-revalidate: Trả về cache ngay, cập nhật ngầm phía sau
   if (cached && cached.length > 0) {
     fetchRemote().catch(err => console.warn('[Sync] Background fetch failed:', err.message));
     return cached; 
   }
 
-  // Fallback nếu không có cache
   return await fetchRemote();
 };
