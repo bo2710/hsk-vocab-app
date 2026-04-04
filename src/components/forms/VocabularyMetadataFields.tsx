@@ -1,6 +1,5 @@
 // filepath: src/components/forms/VocabularyMetadataFields.tsx
 import React from 'react';
-import { Input } from '../ui/Input';
 
 interface MetadataFieldsProps {
   formData: {

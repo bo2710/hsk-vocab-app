@@ -1,5 +1,5 @@
 // filepath: src/features/audio/hooks/useAudioPreferences.ts
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { AudioPreferenceSettings } from '../types';
 
 const PREF_KEY = 'hsk_audio_preferences';

@@ -7,10 +7,6 @@ import {
 } from '../types';
 import { resolveAudioProvider } from '../../../lib/speech/audioProviderResolver';
 
-// Mock normalizer if it was previously imported from normalizers
-// We keep the old import line just in case, but rely heavily on the resolver abstraction now.
-// import { normalizeAudioProviderPreference } from '../../../lib/normalizers';
-
 export const audioResolutionService = {
   /**
    * Lấy cấu hình provider mặc định của hệ thống / user
@@ -39,7 +35,7 @@ export const audioResolutionService = {
   /**
    * Quyết định provider và text cần đọc cho một câu context.
    */
-  async resolveContextAudio(request: ContextAudioRequest): Promise<AudioResolutionResult> {
+  async resolveContextAudio(_request: ContextAudioRequest): Promise<AudioResolutionResult> {
     const targetProvider = undefined; // Sẽ mở rộng truyền preferred context provider ở task sau nếu cần
     const resolved = resolveAudioProvider(targetProvider);
     
