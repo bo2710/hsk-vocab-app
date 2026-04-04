@@ -1,6 +1,7 @@
 // filepath: src/features/publicVocabulary/hooks/usePublicVocabularyContribution.ts
-import { useState } from 'react';
-import { ContributionFormData, PublicVocabularyEntry } from '../types';
+// CẦN CHỈNH SỬA
+import { useState, useCallback } from 'react';
+import { ContributionFormData, PublicVocabularyEntry, PublicVocabularyContribution } from '../types';
 import { publicVocabularyContributionService } from '../services/publicVocabularyContributionService';
 import { buildContributionPayloadFromForm } from '../../../lib/normalizers/publicVocabulary';
 import { validateContributionForm } from '../../../lib/validators/publicVocabulary';
@@ -11,10 +12,22 @@ export const usePublicVocabularyContribution = () => {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [isSuccess, setIsSuccess] = useState(false);
   
-  // States cho Duplicate Detection
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [duplicateCandidates, setDuplicateCandidates] = useState<PublicVocabularyEntry[]>([]);
   const [pendingFormData, setPendingFormData] = useState<ContributionFormData | null>(null);
+
+  // States cho User History
+  const [userContributions, setUserContributions] = useState<PublicVocabularyContribution[]>([]);
+  const [isLoadingContributions, setIsLoadingContributions] = useState(false);
+
+  const fetchUserContributions = useCallback(async () => {
+    setIsLoadingContributions(true);
+    const result = await publicVocabularyContributionService.getUserContributions();
+    if (result.status === 'success') {
+      setUserContributions(result.data || []);
+    }
+    setIsLoadingContributions(false);
+  }, []);
 
   const submit = async (formData: ContributionFormData, ignoreDuplicates: boolean = false): Promise<boolean> => {
     setIsSubmitting(true);
@@ -23,17 +36,13 @@ export const usePublicVocabularyContribution = () => {
     setIsSuccess(false);
 
     try {
-      // 1. Form Level Validation
       const formValidation = validateContributionForm(formData);
       if (!formValidation.isValid) {
         setValidationErrors(formValidation.errors);
         return false;
       }
 
-      // 2. Build Payload
       const payload = buildContributionPayloadFromForm(formData);
-
-      // 3. Call Service
       const result = await publicVocabularyContributionService.submitContribution(payload, ignoreDuplicates);
 
       if (result.status === 'validation_error') {
@@ -55,6 +64,7 @@ export const usePublicVocabularyContribution = () => {
       setIsSuccess(true);
       setShowDuplicateWarning(false);
       setPendingFormData(null);
+      fetchUserContributions(); // Làm mới danh sách khi submit thành công
       return true;
     } catch (err: any) {
       setError(err.message || 'Đã xảy ra lỗi khi gửi đóng góp.');
@@ -66,7 +76,7 @@ export const usePublicVocabularyContribution = () => {
 
   const confirmSubmit = async (): Promise<boolean> => {
     if (!pendingFormData) return false;
-    return await submit(pendingFormData, true); // Gọi lại submit với cờ bỏ qua cảnh báo trùng lặp
+    return await submit(pendingFormData, true); 
   };
 
   const cancelDuplicateWarning = () => {
@@ -92,6 +102,9 @@ export const usePublicVocabularyContribution = () => {
     isSuccess,
     showDuplicateWarning,
     duplicateCandidates,
-    resetStatus
+    resetStatus,
+    userContributions,
+    isLoadingContributions,
+    fetchUserContributions
   };
 };

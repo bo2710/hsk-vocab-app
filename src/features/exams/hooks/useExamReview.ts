@@ -1,12 +1,11 @@
 // filepath: src/features/exams/hooks/useExamReview.ts
-// CẦN CHỈNH SỬA
 import { useState, useMemo, useCallback } from 'react';
 import { useExamResult } from './useExamResult';
 
 export const useExamReview = (paperId: string | undefined, attemptId: string | undefined) => {
   const { data, isLoading, error } = useExamResult(paperId, attemptId);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [isGridOpen, setIsGridOpen] = useState(false); // TASK-033: Navigator state
+  const [isGridOpen, setIsGridOpen] = useState(false);
 
   // Derive flat list of active questions (similar to session behavior)
   const questions = useMemo(() => {

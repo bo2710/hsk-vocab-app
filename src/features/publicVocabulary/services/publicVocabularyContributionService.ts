@@ -1,3 +1,5 @@
+// filepath: src/features/publicVocabulary/services/publicVocabularyContributionService.ts
+// CẦN CHỈNH SỬA
 import { publicVocabularyRepository } from '../../../lib/supabase';
 import { validatePublicVocabularyContribution } from '../../../lib/validators/publicVocabulary';
 import { normalizePublicVocabularyContribution } from '../../../lib/normalizers/publicVocabulary';
@@ -12,17 +14,13 @@ export const publicVocabularyContributionService = {
     input: CreateContributionPayload, 
     ignoreDuplicateCheck: boolean = false
   ): Promise<SubmitContributionResult> {
-    // 1. Normalize
     const normalizedData = normalizePublicVocabularyContribution(input);
 
-    // 2. Validate
     const validation = validatePublicVocabularyContribution(normalizedData);
     if (!validation.isValid) {
       return { status: 'validation_error', validationErrors: validation.errors };
     }
 
-    // 3. Duplicate Detection (Rule-based precheck)
-    // Nếu mất mạng, ta bỏ qua duplicate check và đưa thẳng vào queue offline
     if (!ignoreDuplicateCheck && typeof navigator !== 'undefined' && navigator.onLine) {
       try {
         const searchResult = await publicVocabularyService.browsePublicEntries({ 
@@ -40,11 +38,10 @@ export const publicVocabularyContributionService = {
           }
         }
       } catch (e) {
-        // Bỏ qua lỗi search và tiếp tục quy trình submit (fallback to queue nếu cần)
+        // Fallback
       }
     }
 
-    // 4. Data Access (Offline queue strategy)
     try {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         throw new Error('Offline');
@@ -90,7 +87,26 @@ export const publicVocabularyContributionService = {
       if (result.error) throw result.error;
       return { status: 'success', data: result.data || [] };
     } catch (err: any) {
-      // Đối với view, nếu rớt mạng, tạm thời fail gracefully
+      return { status: 'error', error: err instanceof Error ? err : new Error(String(err)) };
+    }
+  },
+
+  async getPendingContributions(): Promise<ServiceResult<PublicVocabularyContribution[]>> {
+    try {
+      const result = await publicVocabularyRepository.getPendingContributions();
+      if (result.error) throw result.error;
+      return { status: 'success', data: result.data || [] };
+    } catch (err: any) {
+      return { status: 'error', error: err instanceof Error ? err : new Error(String(err)) };
+    }
+  },
+
+  async resolveContributions(ids: string[], status: 'approved' | 'rejected', note?: string): Promise<ServiceResult<void>> {
+    try {
+      const result = await publicVocabularyRepository.resolveContributions(ids, status, note);
+      if (result.error) throw result.error;
+      return { status: 'success' };
+    } catch (err: any) {
       return { status: 'error', error: err instanceof Error ? err : new Error(String(err)) };
     }
   }

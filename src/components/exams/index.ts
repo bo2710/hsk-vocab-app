@@ -1,5 +1,6 @@
 // filepath: src/components/exams/index.ts
 // CẦN CHỈNH SỬA
+// (Giả định nối thêm các export mới vào cuối file, bảo toàn toàn bộ nội dung hiện tại theo ARCHITECTURE_LOCK.md)
 export * from './ExamPlaceholderState';
 export * from './ExamCenterHero';
 export * from './ExamLevelTabs';
@@ -32,10 +33,6 @@ export * from './ExamSessionNavigation';
 export * from './ExamSessionProgress';
 export * from './ExamSessionEmptyState';
 export * from './ExamQuestionShell';
-export * from './ExamQuestionNavigatorGrid';
-export * from './ExamQuestionNavigatorLegend';
-export * from './ExamSessionQuestionGridPanel';
-export * from './ExamReviewQuestionGridPanel';
 export * from './ListeningAudioPanel';
 export * from './ListeningChoiceList';
 export * from './ListeningQuestionFallback';
@@ -69,3 +66,8 @@ export * from './ExamMistakeInsightPanel';
 export * from './ExamWeakWordCard';
 export * from './ExamWeakWordsEmptyState';
 export * from './ExamWeakWordsPanel';
+export * from './ExamQuestionNavigatorGrid';
+export * from './ExamQuestionNavigatorLegend';
+export * from './ExamSessionQuestionGridPanel';
+export * from './ExamReviewQuestionGridPanel';
+export * from './ExamPaperSettingsModal';

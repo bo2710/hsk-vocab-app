@@ -31,7 +31,8 @@ export const ExamPaperLibrary: React.FC = () => {
     isSelectionMode,
     toggleSelection,
     clearSelection,
-    isSelected
+    isSelected,
+    toggleSelectionMode
   } = useExamLibrarySelection();
 
   const handleDeleteSelected = async () => {
@@ -90,8 +91,19 @@ export const ExamPaperLibrary: React.FC = () => {
             selectedVisibility={selectedVisibility} 
             onSelect={setSelectedVisibility} 
           />
-          <div className="text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-            Hiển thị <span className="text-gray-900 dark:text-white">{exams.length}</span> đề thi
+          <div className="flex items-center gap-3">
+            <div className="text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              Hiển thị <span className="text-gray-900 dark:text-white">{exams.length}</span> đề thi
+            </div>
+            {exams.length > 0 && (
+              <Button 
+                variant={isSelectionMode ? "primary" : "outline"} 
+                size="sm" 
+                onClick={toggleSelectionMode}
+              >
+                {isSelectionMode ? 'Hủy chọn' : 'Chọn nhiều'}
+              </Button>
+            )}
           </div>
         </div>
       </div>

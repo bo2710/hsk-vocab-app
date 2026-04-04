@@ -1,3 +1,5 @@
+// filepath: src/app/providers/AuthProvider.tsx
+// CẦN CHỈNH SỬA
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase/client';
@@ -6,6 +8,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   logout: () => Promise<void>;
@@ -39,7 +42,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initializeAuth();
 
-    // Lắng nghe sự thay đổi trạng thái xác thực (Login, Logout, Token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (mounted) {
         setSession(session);
@@ -63,10 +65,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
   };
 
+  // Xác định role Admin an toàn dựa trên metadata của Supabase Auth
+  const isAdmin = Boolean(
+    user?.app_metadata?.role === 'admin' || 
+    user?.user_metadata?.is_admin === true || 
+    user?.user_metadata?.role === 'admin'
+  );
+
   const value = {
     user,
     session,
     isAuthenticated: !!user,
+    isAdmin,
     isLoading,
     login,
     logout,

@@ -1,6 +1,6 @@
 // filepath: src/lib/validators/exams.ts
 // CẦN CHỈNH SỬA
-import { ExamPaper, ExamQuestion, EXAM_PAPER_STATUSES } from '../../features/exams/types';
+import { ExamPaper, ExamQuestion, EXAM_PAPER_STATUSES, UpdateExamPaperInput } from '../../features/exams/types';
 import { ValidationResult } from './vocabulary';
 
 export const validateExamPaperDraft = (data: Partial<ExamPaper>): ValidationResult => {
@@ -49,7 +49,32 @@ export const validateExamQuestionDraft = (data: Partial<ExamQuestion>): Validati
   };
 };
 
-// TASK-029: Deep validation for ChatGPT JSON handoff envelope
+// Validation cho thao tác Update (TASK-035)
+export const validateExamPaperUpdate = (data: Partial<UpdateExamPaperInput>): ValidationResult => {
+  const errors: Record<string, string> = {};
+
+  if (data.title !== undefined && data.title.trim().length === 0) {
+    errors.title = 'Tên đề thi không được để trống.';
+  }
+
+  if (data.total_duration_seconds !== undefined && data.total_duration_seconds !== null && data.total_duration_seconds < 0) {
+    errors.total_duration_seconds = 'Thời gian thi không được là số âm.';
+  }
+
+  if (data.listening_media_type === 'youtube_link' && (!data.listening_media_url || data.listening_media_url.trim().length === 0)) {
+    errors.listening_media_url = 'Vui lòng nhập đường dẫn YouTube hợp lệ.';
+  }
+
+  if (data.listening_media_type === 'audio_file' && (!data.listening_media_url || data.listening_media_url.trim().length === 0)) {
+    errors.listening_media_url = 'Vui lòng nhập đường dẫn file audio hợp lệ.';
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+};
+
 export const validateJsonHandoffEnvelope = (data: any): ValidationResult => {
   const errors: Record<string, string> = {};
 
@@ -76,7 +101,6 @@ export const validateJsonHandoffEnvelope = (data: any): ValidationResult => {
         }
         expectedOrder++;
         
-        // Chống lộ đáp án (leakage check)
         const textToCheck = (q.prompt_text || '') + ' ' + (q.options?.map((o:any)=>o.option_text).join(' ') || '');
         if (textToCheck.includes('答案') || textToCheck.includes('Answer Key') || textToCheck.includes('Correct:')) {
            errors[`question_${q.question_order}_leak`] = `Câu hỏi số ${q.question_order} có dấu hiệu lộ đáp án trong nội dung văn bản. Vui lòng xóa nội dung đáp án khỏi câu hỏi và dán lại.`;

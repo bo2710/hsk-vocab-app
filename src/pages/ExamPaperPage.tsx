@@ -1,15 +1,22 @@
+// filepath: src/pages/ExamPaperPage.tsx
+// CẦN CHỈNH SỬA
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { supabase } from '../lib/supabase/client';
+import { useAuth } from '../app/providers/AuthProvider';
 import { Button } from '../components/ui/Button';
 import { useExamPaperDetail } from '../features/exams/hooks/useExamPaperDetail';
 import { 
   ExamPaperHero, 
   ExamPaperSummary, 
   ExamSectionSelector, 
-  ExamPaperEmptyState 
+  ExamPaperEmptyState,
+  ExamPaperSettingsModal
 } from '../components/exams';
 
 export default function ExamPaperPage() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const { paperId } = useParams<{ paperId: string }>();
   const { 
     bundle, 
@@ -21,8 +28,28 @@ export default function ExamPaperPage() {
     refetch
   } = useExamPaperDetail(paperId);
 
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setCurrentUserId(data.user.id);
+      }
+    });
+  }, []);
+
+  const isOwner = Boolean(
+    bundle?.paper?.imported_by_user_id && 
+    currentUserId && 
+    bundle.paper.imported_by_user_id === currentUserId
+  );
+
+  // Quyền "Edit/Tương tác" bao gồm: Owner, Admin, hoặc bất kỳ ai đối với đề Public (system)
+  const isPublic = bundle?.paper?.owner_scope === 'system';
+  const canInteractSettings = isOwner || isAdmin || isPublic;
+
   const handleStartSession = () => {
-    // CTA Handoff sang TASK-016
     navigate(`/exams/${paperId}/session`, { 
       state: { selectedSectionIds } 
     });
@@ -71,7 +98,13 @@ export default function ExamPaperPage() {
         Quay lại thư viện
       </button>
 
-      <ExamPaperHero paper={bundle.paper} />
+      {/* Truyền cờ giả 'isOwner' cho Hero để nó render nút Settings. Quyền xử lý thực sự do Modal nắm. */}
+      <ExamPaperHero 
+        paper={bundle.paper} 
+        isOwner={canInteractSettings} 
+        onOpenSettings={() => setIsSettingsOpen(true)} 
+      />
+      
       <ExamPaperSummary paper={bundle.paper} />
 
       {bundle.sections && bundle.sections.length > 0 ? (
@@ -103,6 +136,17 @@ export default function ExamPaperPage() {
         </>
       ) : (
         <ExamPaperEmptyState />
+      )}
+
+      {canInteractSettings && isSettingsOpen && (
+        <ExamPaperSettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          paper={bundle.paper}
+          onSuccess={refetch}
+          isAdmin={isAdmin}
+          isOwner={isOwner}
+        />
       )}
     </div>
   );

@@ -19,10 +19,15 @@ export const ExamPaperCard: React.FC<ExamPaperCardProps> = ({
   onToggleSelect 
 }) => {
   
+  // Chỉ cho phép user chọn/xóa những đề cá nhân (hoặc tự import), không cho phép xóa đề system
+  const canSelect = paper.owner_scope !== 'system';
+
   const handleCardClick = (e: React.MouseEvent) => {
-    if (isSelectionMode && onToggleSelect) {
+    if (isSelectionMode) {
       e.preventDefault();
-      onToggleSelect(paper.id);
+      if (canSelect && onToggleSelect) {
+        onToggleSelect(paper.id);
+      }
     }
   };
 
@@ -30,18 +35,21 @@ export const ExamPaperCard: React.FC<ExamPaperCardProps> = ({
     isSelected 
       ? 'border-primary-500 ring-1 ring-primary-500 dark:border-primary-400 dark:ring-primary-400' 
       : 'border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-800/50'
-  } ${isSelectionMode ? 'cursor-pointer' : ''}`;
+  } ${isSelectionMode ? (canSelect ? 'cursor-pointer' : 'cursor-not-allowed opacity-75') : ''}`;
 
   const cardContent = (
     <>
-      {(isSelectionMode || isSelected) && (
+      {isSelectionMode && (
         <div className="absolute top-4 left-4 z-10">
           <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
             isSelected 
               ? 'bg-primary-500 border-primary-500' 
-              : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
+              : canSelect 
+                ? 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800' 
+                : 'border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-700'
           }`}>
             {isSelected && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>}
+            {!canSelect && !isSelected && <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>}
           </div>
         </div>
       )}

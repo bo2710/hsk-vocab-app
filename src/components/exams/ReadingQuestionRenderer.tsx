@@ -1,3 +1,4 @@
+// filepath: src/components/exams/ReadingQuestionRenderer.tsx
 import React from 'react';
 import { ExamQuestion, ExamSection, ExamQuestionOption, ExamAttemptResponse } from '../../features/exams/types';
 import { useReadingQuestion } from '../../features/exams/hooks/useReadingQuestion';

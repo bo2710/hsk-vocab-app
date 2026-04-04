@@ -1,4 +1,6 @@
+// filepath: src/features/exams/hooks/useReadingQuestion.ts
 import { ExamQuestion, ExamSection } from '../types';
+import { useExamReadingPassage } from './useExamReadingPassage';
 
 export const useReadingQuestion = (
   question: ExamQuestion,
@@ -6,11 +8,8 @@ export const useReadingQuestion = (
 ) => {
   const isReading = section?.skill === 'reading' || question.question_type.toLowerCase().includes('read');
 
-  // Lấy nội dung passage: Ưu tiên từ render_config_json, sau đó đến prompt_rich_text (nếu câu hỏi gộp cả bài đọc), hoặc instructions của section
-  const config = question.render_config_json as { passage?: string } | null;
-  const passageText = config?.passage || question.prompt_rich_text || section?.instructions || null;
-
-  const hasPassage = !!passageText;
+  // Không cần ném section vào nữa vì ta không dùng fallback bừa bãi
+  const { passageText, hasPassage } = useExamReadingPassage(question);
 
   return {
     isReading,

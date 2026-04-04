@@ -1,6 +1,21 @@
 // filepath: src/components/publicVocabulary/PublicVocabularyContributionStatus.tsx
+// CẦN CHỈNH SỬA
 import React from 'react';
 import { Button } from '../ui/Button';
+
+// Utility component (Badge) được export để tái sử dụng trong các list view
+export const ContributionStatusBadge: React.FC<{ status: string }> = ({ status }) => {
+  switch (status) {
+    case 'approved': 
+      return <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide">Đã duyệt</span>;
+    case 'rejected': 
+      return <span className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide">Từ chối</span>;
+    case 'pending': 
+      return <span className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide">Chờ duyệt</span>;
+    default: 
+      return <span className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide">{status}</span>;
+  }
+};
 
 interface PublicVocabularyContributionStatusProps {
   isSuccess: boolean;
@@ -40,7 +55,7 @@ export const PublicVocabularyContributionStatus: React.FC<PublicVocabularyContri
         <h3 className="text-xl font-bold text-gray-900 dark:text-white">Đã gửi thành công!</h3>
         <p className="text-gray-500 dark:text-gray-400 text-sm">
           Cảm ơn bạn đã đóng góp. Từ vựng hiện đang ở trạng thái <strong>Chờ duyệt (Pending)</strong>. 
-          Hệ thống sẽ tiến hành kiểm tra trùng lặp và đối chiếu từ điển trước khi hiển thị công khai.
+          Hệ thống sẽ tiến hành kiểm tra trung lặp và đối chiếu từ điển trước khi hiển thị công khai.
         </p>
         <div className="pt-4 flex gap-3 w-full mt-4">
           <Button variant="secondary" onClick={onClose} fullWidth>Quay lại danh sách</Button>

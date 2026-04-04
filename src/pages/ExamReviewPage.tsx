@@ -1,5 +1,4 @@
 // filepath: src/pages/ExamReviewPage.tsx
-// CẦN CHỈNH SỬA
 import { useNavigate, useParams } from 'react-router-dom';
 import { useExamReview } from '../features/exams/hooks/useExamReview';
 import { useExamVocabularyEncounters } from '../features/exams/hooks/useExamVocabularyEncounters';
@@ -40,8 +39,9 @@ export default function ExamReviewPage() {
   const isReading = currentSection?.skill === 'reading';
   const isWriting = currentSection?.skill === 'writing';
 
+  // Chuyển về lấy đúng passage đã qua map xử lý, không dùng instruction thừa thãi
   const config = currentQuestion?.render_config_json as any;
-  const readingPassage = isReading ? (config?.passage || currentQuestion?.prompt_rich_text || currentSection?.instructions) : null;
+  const readingPassage = isReading ? (config?.passage || currentQuestion?.prompt_rich_text) : null;
 
   // Gọi hook quét Encounter Vocabulary cho câu hỏi hiện tại
   const { 

@@ -1,5 +1,4 @@
 // filepath: src/features/exams/hooks/useExamSession.ts
-// CẦN CHỈNH SỬA
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { examPaperService } from '../services/examPaperService';
 import { examAttemptService } from '../services/examAttemptService';
@@ -17,7 +16,7 @@ export const useExamSession = (paperId: string | undefined, selectedSectionIds: 
   
   // Navigation State
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [isGridOpen, setIsGridOpen] = useState(false); // TASK-033: Navigator state
+  const [isGridOpen, setIsGridOpen] = useState(false);
   
   // Runtime State
   const [elapsedSeconds, setElapsedSeconds] = useState(0);

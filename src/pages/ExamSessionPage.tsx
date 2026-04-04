@@ -1,5 +1,4 @@
 // filepath: src/pages/ExamSessionPage.tsx
-// CẦN CHỈNH SỬA
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useExamSession } from '../features/exams/hooks/useExamSession';
 import { 

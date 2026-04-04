@@ -1,6 +1,6 @@
 // filepath: src/lib/normalizers/exams.ts
-// CẦN CHỈNH SỬA
 import { ExamJsonHandoffEnvelope, ExamPaperContentBundle, ExamPaper, ExamSection, ExamQuestion, ExamQuestionOption } from '../../features/exams/types';
+import { mapSectionReadingPassages } from './examReadingPassageMapper';
 
 export const normalizeExamPaperDraft = (data: Partial<ExamPaper>): Partial<ExamPaper> => {
   const normalized = { ...data };
@@ -61,7 +61,6 @@ export const normalizeJsonHandoffToBundle = (envelope: ExamJsonHandoffEnvelope, 
     instructions: null,
     tags: [],
     
-    // TASK-032: Gán dữ liệu media
     listening_media_type: envelope.media?.type || 'none',
     listening_media_url: envelope.media?.url || null,
 
@@ -93,7 +92,10 @@ export const normalizeJsonHandoffToBundle = (envelope: ExamJsonHandoffEnvelope, 
     };
     sections.push(section);
 
-    for (const qJson of secJson.questions) {
+    // TASK-034: Map reading passages safely before generating question DB records
+    const mappedQuestions = mapSectionReadingPassages(secJson);
+
+    for (const qJson of mappedQuestions) {
       const questionId = crypto.randomUUID();
       
       const reviewKey = envelope.review_only?.answer_keys?.find(k => k.question_order === qJson.question_order);
@@ -139,7 +141,8 @@ export const normalizeJsonHandoffToBundle = (envelope: ExamJsonHandoffEnvelope, 
         difficulty_tag: null,
         source_page_index: null,
         raw_import_block_id: null,
-        render_config_json: null,
+        // render_config_json is now intelligently populated by mapSectionReadingPassages
+        render_config_json: qJson.render_config_json || null,
         created_at: paper.created_at,
         updated_at: paper.updated_at
       };

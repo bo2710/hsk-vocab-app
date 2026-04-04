@@ -1,6 +1,5 @@
 // filepath: src/features/exams/types.ts
 // CẦN CHỈNH SỬA
-// Constants (Enums)
 export const EXAM_OWNER_SCOPES = ['system', 'user_private'] as const;
 export const EXAM_SOURCE_TYPES = ['pdf_import', 'system_seed', 'manual'] as const;
 export const EXAM_PAPER_STATUSES = ['draft', 'published', 'archived'] as const;
@@ -12,7 +11,6 @@ export const EXAM_CONFIDENCE_LEVELS = ['high', 'medium', 'low'] as const;
 export const EXAM_ENCOUNTER_ROLES = ['prompt', 'option', 'transcript', 'explanation'] as const;
 export const EXAM_LISTENING_MEDIA_TYPES = ['none', 'audio_file', 'youtube_link'] as const;
 
-// Derived Types
 export type ExamOwnerScope = typeof EXAM_OWNER_SCOPES[number];
 export type ExamSourceType = typeof EXAM_SOURCE_TYPES[number];
 export type ExamPaperStatus = typeof EXAM_PAPER_STATUSES[number];
@@ -24,7 +22,6 @@ export type ExamConfidenceLevel = typeof EXAM_CONFIDENCE_LEVELS[number];
 export type ExamEncounterRole = typeof EXAM_ENCOUNTER_ROLES[number];
 export type ExamListeningMediaType = typeof EXAM_LISTENING_MEDIA_TYPES[number];
 
-// Models
 export interface ExamPaper {
   id: string;
   owner_scope: ExamOwnerScope;
@@ -47,7 +44,6 @@ export interface ExamPaper {
   instructions: string | null;
   tags: string[];
   
-  // Media Source metadata (TASK-032)
   listening_media_type: ExamListeningMediaType;
   listening_media_url: string | null;
 
@@ -151,10 +147,7 @@ export interface ExamAttemptResponse {
   confidence_level: ExamConfidenceLevel | null;
   error_category: string | null;
   error_note: string | null;
-  
-  // TASK-033: Local property (won't map exactly to DB unless migrated, but safe for JSONB draft)
   is_marked_for_later?: boolean;
-
   created_at: string;
   updated_at: string;
 }
@@ -182,7 +175,6 @@ export interface ExamVocabularyEncounter {
   updated_at: string;
 }
 
-// V2 Service Types
 export interface ExamPaperListParams {
   level?: number;
   status?: ExamPaperStatus;
@@ -203,6 +195,31 @@ export interface ServiceResult<T> {
   validationErrors?: Record<string, string>;
 }
 
+export interface UpdateExamPaperInput {
+  title?: string;
+  exam_level?: number | null;
+  total_duration_seconds?: number | null;
+  owner_scope?: ExamOwnerScope;
+  listening_media_type?: ExamListeningMediaType;
+  listening_media_url?: string | null;
+}
+
+// Moderation Types
+export type ExamEditRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface ExamEditRequest {
+  id: string;
+  exam_paper_id: string;
+  user_id: string;
+  payload: UpdateExamPaperInput;
+  status: ExamEditRequestStatus;
+  created_at: string;
+  resolved_at: string | null;
+  
+  // Joined fields
+  exam_papers?: { title: string };
+}
+
 export interface ExamSubmissionPayload {
   attemptId: string;
   durationSeconds: number;
@@ -216,7 +233,6 @@ export interface ExamResultData {
   bundle: ExamPaperContentBundle;
 }
 
-// Extended types for TASK-023
 export interface AggregateMistakeInsight {
   id: string;
   insight_type: 'section_weakness' | 'time_management' | 'accuracy_drop' | 'unanswered';
@@ -233,7 +249,6 @@ export interface ReviewRecommendation {
   priority: 'high' | 'medium' | 'low';
 }
 
-// Extended types for TASK-024
 export interface ExamWeakWord {
   vocabulary_id: string;
   hanzi: string;
@@ -244,17 +259,24 @@ export interface ExamWeakWord {
   priority: 'high' | 'medium' | 'low';
 }
 
-// --- TASK-028 JSON Handoff Contracts ---
-
 export interface ExamJsonHandoffOption {
   option_key: string;
   option_text: string;
+}
+
+export interface ExamJsonHandoffPassage {
+  passage_id: string;
+  question_range: [number, number];
+  text: string;
 }
 
 export interface ExamJsonHandoffQuestion {
   question_order: number;
   question_type: string;
   prompt_text: string | null;
+  passage_id?: string;
+  passage_text?: string | null;
+  render_config_json?: Record<string, unknown> | null;
   options: ExamJsonHandoffOption[];
 }
 
@@ -263,6 +285,7 @@ export interface ExamJsonHandoffSection {
   section_name: string;
   skill: ExamSectionSkill;
   instructions: string | null;
+  passages?: ExamJsonHandoffPassage[];
   questions: ExamJsonHandoffQuestion[];
 }
 

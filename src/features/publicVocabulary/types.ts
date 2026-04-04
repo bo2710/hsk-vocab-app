@@ -1,4 +1,5 @@
 // filepath: src/features/publicVocabulary/types.ts
+// CẦN CHỈNH SỬA
 export const PUBLIC_CONTRIBUTION_VALIDATION_STATUSES = ['pending', 'approved', 'rejected', 'duplicate'] as const;
 export type PublicContributionValidationStatus = typeof PUBLIC_CONTRIBUTION_VALIDATION_STATUSES[number];
 

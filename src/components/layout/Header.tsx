@@ -1,5 +1,8 @@
+// filepath: src/components/layout/Header.tsx
+// CẦN CHỈNH SỬA
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../app/providers/AuthProvider';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -7,6 +10,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
   const toggleTheme = () => {
@@ -53,6 +57,14 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
           )}
         </button>
+
+        {/* BADGE ADMIN */}
+        {isAdmin && (
+          <span className="hidden sm:inline-flex bg-gradient-to-r from-purple-500 to-indigo-500 text-white border border-purple-600/50 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest shadow-sm">
+            Admin
+          </span>
+        )}
+
         <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-primary-500 to-blue-400 flex items-center justify-center shadow-sm cursor-pointer border-2 border-white dark:border-gray-800" onClick={() => navigate('/settings')}>
           <span className="text-white text-sm font-semibold">Me</span>
         </div>

@@ -1,11 +1,14 @@
 // filepath: src/features/exams/services/examPaperService.ts
 // CẦN CHỈNH SỬA
 import { examPaperRepository } from '../../../lib/supabase';
+import { validateExamPaperUpdate } from '../../../lib/validators/exams';
 import { 
   ExamPaper, 
   ExamPaperListParams, 
   ExamPaperContentBundle,
-  ServiceResult 
+  ServiceResult,
+  UpdateExamPaperInput,
+  ExamEditRequest
 } from '../types';
 
 export const examPaperService = {
@@ -49,9 +52,38 @@ export const examPaperService = {
     };
   },
 
+  async updateExamPaper(id: string, payload: UpdateExamPaperInput): Promise<ServiceResult<ExamPaper>> {
+    const validation = validateExamPaperUpdate(payload);
+    if (!validation.isValid) {
+      return { status: 'validation_error', validationErrors: validation.errors };
+    }
+
+    const result = await examPaperRepository.updateExamPaper(id, payload);
+    if (result.error) return { status: 'error', error: result.error };
+    return { status: 'success', data: result.data! };
+  },
+
   async deleteExamPapers(ids: string[]): Promise<ServiceResult<void>> {
     if (!ids || ids.length === 0) return { status: 'success' };
     const result = await examPaperRepository.deleteExamPapers(ids);
+    if (result.error) return { status: 'error', error: result.error };
+    return { status: 'success' };
+  },
+
+  async createEditRequest(paperId: string, payload: UpdateExamPaperInput): Promise<ServiceResult<ExamEditRequest>> {
+    const result = await examPaperRepository.createEditRequest(paperId, payload);
+    if (result.error) return { status: 'error', error: result.error };
+    return { status: 'success', data: result.data! };
+  },
+
+  async getPendingEditRequests(): Promise<ServiceResult<ExamEditRequest[]>> {
+    const result = await examPaperRepository.getPendingEditRequests();
+    if (result.error) return { status: 'error', error: result.error };
+    return { status: 'success', data: result.data! };
+  },
+
+  async resolveEditRequest(requestId: string, status: 'approved' | 'rejected'): Promise<ServiceResult<void>> {
+    const result = await examPaperRepository.resolveEditRequest(requestId, status);
     if (result.error) return { status: 'error', error: result.error };
     return { status: 'success' };
   }
