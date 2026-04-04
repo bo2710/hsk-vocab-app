@@ -1,10 +1,13 @@
+// filepath: src/lib/validators/vocabulary.ts
 import { VocabularyItem, VocabularyContext } from '../../types';
 import { 
   VOCABULARY_STATUSES, 
   CONTEXT_TYPES, 
   MIN_HSK_LEVEL, 
-  MAX_HSK_LEVEL 
-} from '../constants';
+  MAX_HSK_LEVEL,
+  SOURCE_SCOPES,
+  CONTRIBUTION_STATUSES
+} from '../constants/vocabulary';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -12,7 +15,7 @@ export interface ValidationResult {
 }
 
 /**
- * Kiểm tra dữ liệu đầu vào của một từ vựng trước khi lưu
+ * Kiểm tra dữ liệu đầu vào của một từ vựng trước khi lưu (Bao gồm V2 metadata)
  */
 export const validateVocabularyItem = (data: Partial<VocabularyItem>): ValidationResult => {
   const errors: Record<string, string> = {};
@@ -32,6 +35,21 @@ export const validateVocabularyItem = (data: Partial<VocabularyItem>): Validatio
   if (data.hsk_level !== undefined && data.hsk_level !== null) {
     if (typeof data.hsk_level !== 'number' || data.hsk_level < MIN_HSK_LEVEL || data.hsk_level > MAX_HSK_LEVEL) {
       errors.hsk_level = `Cấp độ HSK phải nằm trong khoảng ${MIN_HSK_LEVEL} đến ${MAX_HSK_LEVEL}.`;
+    }
+  }
+
+  // V2 Validations
+  if (data.source_scope && !(SOURCE_SCOPES as readonly string[]).includes(data.source_scope)) {
+    errors.source_scope = 'Phạm vi nguồn gốc không hợp lệ.';
+  }
+
+  if (data.contribution_status && !(CONTRIBUTION_STATUSES as readonly string[]).includes(data.contribution_status)) {
+    errors.contribution_status = 'Trạng thái đóng góp không hợp lệ.';
+  }
+
+  if (data.hsk20_level !== undefined && data.hsk20_level !== null) {
+    if (typeof data.hsk20_level !== 'number' || data.hsk20_level < 1 || data.hsk20_level > 6) {
+      errors.hsk20_level = 'Cấp độ HSK 2.0 phải từ 1 đến 6.';
     }
   }
 

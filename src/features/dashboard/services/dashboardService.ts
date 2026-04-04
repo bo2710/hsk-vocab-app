@@ -59,8 +59,22 @@ export const dashboardService = {
       .sort((a, b) => new Date(b.first_added_at).getTime() - new Date(a.first_added_at).getTime())
       .slice(0, 5);
 
-    // 5. Compute Weekly Activity (Derived mock based on first_added_at and last_reviewed_at to keep it light)
-    // We create a rolling 7-day window
+    // 5. Get Exam-derived Weak Words
+    // Fallback logic until TASK-025 persists the exact counters back to IndexedDB.
+    // It surfaces words that have been marked wrong, or are actively learning but not mastered.
+    const weakWords = [...activeWords]
+      .filter(w => 
+        (w.wrong_answer_related_count || 0) > 0 || 
+        ((w.exam_encounter_count || 0) > 0 && w.review_count < 2) || 
+        (w.status === 'learning' && w.review_count === 0)
+      )
+      .sort((a, b) => 
+        (b.wrong_answer_related_count || 0) - (a.wrong_answer_related_count || 0) || 
+        new Date(b.first_added_at).getTime() - new Date(a.first_added_at).getTime()
+      )
+      .slice(0, 5);
+
+    // 6. Compute Weekly Activity
     const weeklyActivity: WeeklyActivity[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -94,7 +108,8 @@ export const dashboardService = {
       summary,
       levelProgress,
       recentWords,
-      weeklyActivity
+      weeklyActivity,
+      weakWords
     };
   }
 };

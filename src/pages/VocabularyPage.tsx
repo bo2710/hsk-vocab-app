@@ -1,3 +1,4 @@
+// filepath: src/pages/VocabularyPage.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVocabularyList } from '../features/vocabulary/hooks/useVocabularyList';
@@ -29,6 +30,9 @@ export const VocabularyPage: React.FC = () => {
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Thêm một state để điều khiển việc collapse/expand bộ lọc nâng cao
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   const isSearchOrFilterActive = searchQuery.trim().length > 0 || isFilterActive;
 
@@ -145,6 +149,8 @@ export const VocabularyPage: React.FC = () => {
             setSearchQuery(''); 
           }}
           isActive={isSearchOrFilterActive}
+          showAdvanced={showAdvancedFilters}
+          setShowAdvanced={setShowAdvancedFilters}
         />
       )}
 

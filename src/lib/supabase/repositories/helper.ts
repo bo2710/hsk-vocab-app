@@ -1,3 +1,4 @@
+// filepath: src/lib/supabase/repositories/helper.ts
 import { supabase } from '../client';
 
 /**
@@ -20,4 +21,18 @@ export const formatError = (error: unknown): Error => {
     return new Error((error as Record<string, unknown>).message as string);
   }
   return new Error('An unknown error occurred during database operation.');
+};
+
+/**
+ * Wrapper dùng chung cho mọi repository call để giảm boilerplate try-catch.
+ */
+export const withRepositoryErrorCatching = async <T>(
+  operation: () => Promise<T>
+): Promise<{ data: T | null; error: Error | null }> => {
+  try {
+    const data = await operation();
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: formatError(error) };
+  }
 };

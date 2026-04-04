@@ -1,3 +1,4 @@
+// filepath: src/lib/speech/speechService.ts
 /**
  * Service quản lý Web Speech API của trình duyệt.
  */
@@ -16,7 +17,8 @@ export const speakHanzi = (
   text: string,
   onStart?: () => void,
   onEnd?: () => void,
-  onError?: (error: any) => void
+  onError?: (error: any) => void,
+  rate: number = 0.8 // Thêm tham số rate để hỗ trợ cấu hình tốc độ đọc
 ) => {
   if (!('speechSynthesis' in window)) {
     return;
@@ -36,7 +38,7 @@ export const speakHanzi = (
     utterance.lang = 'zh-CN';
   }
 
-  utterance.rate = 0.8; // Tốc độ đọc chậm một chút để dễ nghe
+  utterance.rate = rate;
   utterance.pitch = 1;
 
   utterance.onstart = () => onStart?.();
@@ -44,6 +46,12 @@ export const speakHanzi = (
   utterance.onerror = (event) => onError?.(event);
 
   window.speechSynthesis.speak(utterance);
+};
+
+export const stopSpeech = () => {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  }
 };
 
 export const isSpeechSupported = (): boolean => {

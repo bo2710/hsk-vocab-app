@@ -1,3 +1,4 @@
+// filepath: src/features/vocabulary/types.ts
 import { ContextType, VocabularyItem, VocabularyContext } from '../../types';
 
 export interface AddVocabularyFormData {
@@ -11,10 +12,15 @@ export interface AddVocabularyFormData {
   context_type: ContextType;
   learned_at: string; // YYYY-MM-DD format from input type="date"
   
-  // Lấy chính xác Type của hsk_level từ model gốc, tránh lỗi lệch Type (number vs HskLevel)
   hsk_level?: VocabularyItem['hsk_level'];
   tags?: VocabularyItem['tags'];
   status?: VocabularyItem['status'];
+
+  // V2 Fields
+  hsk20_level?: VocabularyItem['hsk20_level'];
+  hsk30_band?: VocabularyItem['hsk30_band'];
+  hsk30_level?: VocabularyItem['hsk30_level'];
+  source_scope?: VocabularyItem['source_scope'];
 }
 
 export type AddVocabularyResult =

@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS public.review_logs (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    vocabulary_id UUID NOT NULL REFERENCES public.vocabulary(id) ON DELETE CASCADE,
+    vocabulary_id UUID NOT NULL REFERENCES public.vocabulary_items(id) ON DELETE CASCADE,
     rating TEXT NOT NULL CHECK (rating IN ('forgot', 'vague', 'remembered')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );

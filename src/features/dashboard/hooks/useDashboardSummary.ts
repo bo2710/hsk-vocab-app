@@ -7,7 +7,8 @@ export const useDashboardSummary = (): DashboardData => {
     summary: { total: 0, new: 0, learning: 0, reviewing: 0, mastered: 0 },
     levelProgress: [],
     recentWords: [],
-    weeklyActivity: []
+    weeklyActivity: [],
+    weakWords: []
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);

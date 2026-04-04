@@ -6,6 +6,7 @@ import { WordDetailHeader } from '../components/vocabulary/WordDetailHeader';
 import { WordDetailMeta } from '../components/vocabulary/WordDetailMeta';
 import { WordDetailContexts } from '../components/vocabulary/WordDetailContexts';
 
+// Audio Playback UI đã được tích hợp trực tiếp vào WordDetailHeader và WordDetailContexts thông qua InlineAudioPlayer
 export const WordDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();

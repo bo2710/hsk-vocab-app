@@ -1,17 +1,18 @@
+// filepath: src/components/forms/EditWordForm.tsx
 import React, { useState } from 'react';
 import { VocabularyItem, VocabularyContext } from '../../types/models';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { Button } from '../ui/Button';
+import { VocabularyMetadataFields } from './VocabularyMetadataFields';
 
-// Mở rộng Payload để bao gồm contexts theo chuẩn đã sửa ở EditService
 export type EditVocabularyPayload = Partial<Omit<VocabularyItem, 'id' | 'user_id' | 'created_at' | 'updated_at'>> & {
   contexts?: Partial<VocabularyContext>[];
 };
 
 interface EditWordFormProps {
   initialData: VocabularyItem;
-  initialContexts?: VocabularyContext[]; // KHÔI PHỤC CONTRACT: Nhận thêm mảng ngữ cảnh
+  initialContexts?: VocabularyContext[];
   onSubmit: (data: EditVocabularyPayload) => Promise<boolean>;
   isSubmitting: boolean;
   onCancel: () => void;
@@ -39,16 +40,22 @@ export const EditWordForm: React.FC<EditWordFormProps> = ({
     status: initialData.status || 'new',
     hsk_level: initialData.hsk_level ? String(initialData.hsk_level) : '',
     tagsStr: initialTagsStr,
+    // V2 Fields
+    hsk20_level: initialData.hsk20_level ? String(initialData.hsk20_level) : '',
+    hsk30_band: initialData.hsk30_band ? String(initialData.hsk30_band) : '',
+    hsk30_level: initialData.hsk30_level ? String(initialData.hsk30_level) : '',
+    source_scope: initialData.source_scope || 'private',
+    preferred_audio_provider: initialData.preferred_audio_provider || '',
+    has_context_audio: Boolean(initialData.has_context_audio),
   });
 
-  // 2. STATE NGỮ CẢNH (Lấy context đầu tiên làm đại diện để chỉnh sửa)
+  // 2. STATE NGỮ CẢNH
   const primaryContext = initialContexts && initialContexts.length > 0 ? initialContexts[0] : null;
   const [contextData, setContextData] = useState({
     id: primaryContext?.id || '',
     context_name: primaryContext?.context_name || '',
     context_type: primaryContext?.context_type || 'sentence',
     context_note: primaryContext?.context_note || '',
-    // Chuyển ISO string sang định dạng YYYY-MM-DD để dùng cho input type="date"
     learned_at: primaryContext?.learned_at 
       ? new Date(primaryContext.learned_at).toISOString().split('T')[0] 
       : new Date().toISOString().split('T')[0],
@@ -56,7 +63,9 @@ export const EditWordForm: React.FC<EditWordFormProps> = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    // Xử lý boolean từ VocabularyMetadataFields truyền lên
+    const finalValue = typeof value === 'boolean' ? value : value;
+    setFormData((prev) => ({ ...prev, [name]: finalValue }));
   };
 
   const handleContextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -73,6 +82,7 @@ export const EditWordForm: React.FC<EditWordFormProps> = ({
       .filter(t => t.length > 0);
 
     const normalizeField = (val: string) => (val.normalize('NFC').trim() || null) as any;
+    const parseIntSafe = (val: string) => val ? parseInt(val, 10) : null;
 
     const payload: EditVocabularyPayload = {
       hanzi: formData.hanzi.normalize('NFC').trim(),
@@ -82,16 +92,23 @@ export const EditWordForm: React.FC<EditWordFormProps> = ({
       han_viet: normalizeField(formData.han_viet),
       note: normalizeField(formData.note),
       example: normalizeField(formData.example),
-      hsk_level: formData.hsk_level ? (parseInt(formData.hsk_level, 10) as any) : (null as any),
+      hsk_level: parseIntSafe(formData.hsk_level) as any,
       tags: (tagsArray.length > 0 ? tagsArray : null) as any,
       
-      // XÂY DỰNG LẠI CONTEXT PAYLOAD
+      // V2 Map
+      hsk20_level: parseIntSafe(formData.hsk20_level) as any,
+      hsk30_band: parseIntSafe(formData.hsk30_band) as any,
+      hsk30_level: parseIntSafe(formData.hsk30_level) as any,
+      source_scope: formData.source_scope as any,
+      preferred_audio_provider: formData.preferred_audio_provider || null,
+      has_context_audio: formData.has_context_audio,
+      
       contexts: contextData.context_name.trim() ? [{
-        id: contextData.id || undefined, // Để trống nếu là context mới thêm
+        id: contextData.id || undefined,
         context_name: contextData.context_name.normalize('NFC').trim(),
         context_type: contextData.context_type as any,
         context_note: contextData.context_note.normalize('NFC').trim(),
-        learned_at: new Date(contextData.learned_at).toISOString(), // Parse ngược lại ISO cho CSDL
+        learned_at: new Date(contextData.learned_at).toISOString(),
       }] : [],
     };
 
@@ -107,33 +124,28 @@ export const EditWordForm: React.FC<EditWordFormProps> = ({
         <Input label="Âm Hán Việt" name="han_viet" value={formData.han_viet} onChange={handleChange} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-1 flex flex-col">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Trạng thái học</label>
-          <select name="status" value={formData.status} onChange={handleChange} className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 outline-none focus:ring-2 focus:ring-primary-500 transition-shadow">
-            <option value="new">Từ mới (New)</option>
-            <option value="learning">Đang học (Learning)</option>
-            <option value="reviewing">Cần ôn tập (Reviewing)</option>
-            <option value="mastered">Đã thuộc (Mastered)</option>
-          </select>
-        </div>
-
-        <div className="space-y-1 flex flex-col">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Cấp độ HSK</label>
-          <select name="hsk_level" value={formData.hsk_level} onChange={handleChange} className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 outline-none focus:ring-2 focus:ring-primary-500 transition-shadow">
-            <option value="">Chưa phân loại</option>
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(level => (
-              <option key={level} value={level}>HSK {level}</option>
-            ))}
-          </select>
-        </div>
+      <div className="space-y-1 flex flex-col">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Trạng thái học</label>
+        <select name="status" value={formData.status} onChange={handleChange} className="w-full md:w-1/2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 outline-none focus:ring-2 focus:ring-primary-500 transition-shadow">
+          <option value="new">Từ mới (New)</option>
+          <option value="learning">Đang học (Learning)</option>
+          <option value="reviewing">Cần ôn tập (Reviewing)</option>
+          <option value="mastered">Đã thuộc (Mastered)</option>
+        </select>
       </div>
 
       <Textarea label="Ghi chú (Note)" name="note" value={formData.note} onChange={handleChange} rows={2} />
       <Textarea label="Ví dụ từ điển (Example)" name="example" value={formData.example} onChange={handleChange} rows={3} />
       <Input label="Nhãn (Tags)" name="tagsStr" value={formData.tagsStr} onChange={handleChange} placeholder="Cách nhau bằng dấu phẩy" />
 
-      {/* KHU VỰC KHÔI PHỤC: NGỮ CẢNH GỐC */}
+      {/* NHÚNG COMPONENT METADATA V2 VÀO ĐÂY */}
+      <VocabularyMetadataFields 
+        formData={formData} 
+        onChange={handleChange} 
+        disabled={isSubmitting} 
+      />
+
+      {/* KHU VỰC NGỮ CẢNH */}
       <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Ngữ cảnh gốc (Context)</h3>
         

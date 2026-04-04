@@ -1,3 +1,4 @@
+// filepath: src/features/settings/services/importService.ts
 import { supabase } from '../../../lib/supabase/client';
 import { ImportSummary } from '../types';
 import { putAllVocabulary } from '../../../lib/indexeddb/vocabularyStore';
@@ -152,6 +153,21 @@ export const importData = async (file: File): Promise<ImportSummary> => {
             updated_at: item.updated_at || now,
             deleted_at: item.deleted_at || null,
             is_archived: Boolean(item.is_archived),
+            
+            // FIX TYPESCRIPT: Thêm V2 fields fallback an toàn
+            source_scope: (item.source_scope as 'private' | 'public') || 'private',
+            public_word_id: (item.public_word_id as string) || null,
+            contribution_status: (item.contribution_status as 'none' | 'pending' | 'accepted' | 'rejected') || 'none',
+            hsk20_level: (item.hsk20_level as number) || null,
+            hsk30_band: (item.hsk30_band as number) || null,
+            hsk30_level: (item.hsk30_level as number) || null,
+            preferred_audio_provider: (item.preferred_audio_provider as string) || null,
+            has_context_audio: Boolean(item.has_context_audio),
+            exam_encounter_count: (item.exam_encounter_count as number) || 0,
+            wrong_answer_related_count: (item.wrong_answer_related_count as number) || 0,
+            last_encountered_at: (item.last_encountered_at as string) || null,
+            source_reference_type: (item.source_reference_type as string) || null,
+            source_reference_id: (item.source_reference_id as string) || null,
           };
           
           validVocabs.push(cleanItem);
@@ -170,6 +186,13 @@ export const importData = async (file: File): Promise<ImportSummary> => {
               created_at: now,
               updated_at: now,
               deleted_at: null,
+              
+              // FIX TYPESCRIPT: Thêm V2 fields fallback an toàn
+              context_text: null,
+              context_translation_vi: null,
+              audio_text_override: null,
+              source_scope: 'private',
+              source_reference_id: null,
             });
           }
         }
@@ -195,6 +218,13 @@ export const importData = async (file: File): Promise<ImportSummary> => {
               created_at: c.created_at || now,
               updated_at: c.updated_at || now,
               deleted_at: c.deleted_at || null,
+              
+              // FIX TYPESCRIPT: Thêm V2 fields fallback an toàn
+              context_text: (c.context_text as string) || null,
+              context_translation_vi: (c.context_translation_vi as string) || null,
+              audio_text_override: (c.audio_text_override as string) || null,
+              source_scope: (c.source_scope as 'private' | 'public') || 'private',
+              source_reference_id: (c.source_reference_id as string) || null,
             };
 
             validContexts.push(cleanContext);

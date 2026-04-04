@@ -1,3 +1,4 @@
+// filepath: src/features/vocabulary/services/vocabularyService.ts
 import { vocabularyRepository } from '../../../lib/supabase/repositories/vocabularyRepository';
 import { contextRepository } from '../../../lib/supabase/repositories/contextRepository';
 import { VocabularyItem } from '../../../types/models';
@@ -20,7 +21,6 @@ export const addVocabulary = async (input: CreateVocabularyInput): Promise<Vocab
     throw new Error('Nghĩa tiếng Việt không được để trống.');
   }
 
-  // Tách riêng payload của từ vựng và ngữ cảnh
   const { context_name, context_type, learned_at, context_note, ...vocabInput } = input;
 
   const normalizedInput = {
@@ -32,6 +32,11 @@ export const addVocabulary = async (input: CreateVocabularyInput): Promise<Vocab
     han_viet: vocabInput.han_viet?.trim() || null,
     note: vocabInput.note?.trim() || null,
     example: vocabInput.example?.trim() || null,
+    
+    // V2 Normalization Ensure
+    source_scope: vocabInput.source_scope || 'private',
+    has_context_audio: Boolean(vocabInput.has_context_audio),
+    preferred_audio_provider: vocabInput.preferred_audio_provider || null,
   };
 
   // KIỂM TRA TRÙNG LẶP (DUPLICATE DETECTION)
@@ -57,7 +62,7 @@ export const addVocabulary = async (input: CreateVocabularyInput): Promise<Vocab
     throw new Error(`DUPLICATE:${JSON.stringify(duplicateData)}`);
   }
 
-  // LƯU DB: Phải lưu Vocabulary trước, rồi dùng ID đó lưu Context
+  // LƯU DB
   try {
     const result = await vocabularyRepository.createVocabulary(normalizedInput as any);
     if (result.error) throw result.error instanceof Error ? result.error : new Error(String(result.error));
@@ -65,7 +70,6 @@ export const addVocabulary = async (input: CreateVocabularyInput): Promise<Vocab
     
     await putVocabulary(result.data);
 
-    // BƯỚC KHÔI PHỤC: Lưu Ngữ Cảnh vào Supabase nếu người dùng có nhập
     if (context_name && context_name.trim().length > 0) {
       await contextRepository.createContext({
         vocabulary_id: result.data.id,
@@ -78,7 +82,7 @@ export const addVocabulary = async (input: CreateVocabularyInput): Promise<Vocab
 
     return result.data;
   } catch (error: any) {
-    // XỬ LÝ OFFLINE (Mất mạng)
+    // XỬ LÝ OFFLINE
     if (isNetworkError(error)) {
       const fallbackId = generateUUID();
       const optimisticItem: VocabularyItem = {
@@ -86,12 +90,16 @@ export const addVocabulary = async (input: CreateVocabularyInput): Promise<Vocab
         id: fallbackId,
         user_id: '', 
         status: 'new',
-        encounter_count: 1, // Lần đầu thêm là đã gặp 1 lần
+        encounter_count: 1,
         review_count: 0,
         first_added_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         is_archived: false,
+        // Offline Default cho V2 tránh rỗng object khi query Local DB
+        contribution_status: 'none',
+        exam_encounter_count: 0,
+        wrong_answer_related_count: 0
       };
 
       await putVocabulary(optimisticItem);
@@ -101,7 +109,6 @@ export const addVocabulary = async (input: CreateVocabularyInput): Promise<Vocab
         payload: optimisticItem
       });
 
-      // Đẩy luôn cả ngữ cảnh vào hàng đợi offline
       if (context_name && context_name.trim().length > 0) {
         await addOperation({
           operationType: 'CREATE',

@@ -5,11 +5,13 @@ import {
   DashboardTodayFocus, 
   DashboardLevelProgress,
   DashboardRecentActivity,
-  DashboardWeeklyChart
+  DashboardWeeklyChart,
+  DashboardWeakWordsCard,
+  DashboardExamEntryCard
 } from '../components/dashboard';
 
 export default function DashboardPage() {
-  const { summary, levelProgress, recentWords, weeklyActivity, isLoading, error } = useDashboardSummary();
+  const { summary, levelProgress, recentWords, weeklyActivity, weakWords, isLoading, error } = useDashboardSummary();
 
   if (error) {
     return (
@@ -82,6 +84,8 @@ export default function DashboardPage() {
 
         {/* Right Column (Sidebar on Desktop) */}
         <div className="space-y-6">
+          <DashboardExamEntryCard />
+          <DashboardWeakWordsCard weakWords={weakWords} />
           <DashboardRecentActivity recentWords={recentWords} />
         </div>
 

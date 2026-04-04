@@ -1,3 +1,5 @@
+// filepath: src/app/router/index.tsx
+// CẦN CHỈNH SỬA
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import LoginPage from '../../pages/LoginPage';
@@ -9,6 +11,15 @@ import EditWordPage from '../../pages/EditWordPage';
 import ReviewPage from '../../pages/ReviewPage';
 import SettingsPage from '../../pages/SettingsPage';
 import { SyncProvider } from '../providers/SyncProvider';
+
+// V2
+import ExamCenterPage from '../../pages/ExamCenterPage';
+import ExamPaperPage from '../../pages/ExamPaperPage';
+import ExamSessionPage from '../../pages/ExamSessionPage';
+import ExamResultPage from '../../pages/ExamResultPage';
+import ExamReviewPage from '../../pages/ExamReviewPage';
+import ImportExamPage from '../../pages/ImportExamPage';
+import PublicVocabularyPage from '../../pages/PublicVocabularyPage';
 
 export const router = createBrowserRouter(
   [
@@ -36,6 +47,16 @@ export const router = createBrowserRouter(
         { path: 'review', element: <ReviewPage /> },
         { path: 'settings', element: <SettingsPage /> },
         
+        // --- V2 Routes ---
+        { path: 'exams', element: <ExamCenterPage /> },
+        { path: 'exams/import', element: <ImportExamPage /> },
+        { path: 'exams/:paperId', element: <ExamPaperPage /> },
+        { path: 'exams/:paperId/session', element: <ExamSessionPage /> },
+        { path: 'exams/:paperId/result/:attemptId', element: <ExamResultPage /> },
+        { path: 'exams/:paperId/review/:attemptId', element: <ExamReviewPage /> },
+        { path: 'public-vocabulary', element: <PublicVocabularyPage /> },
+        // -----------------
+
         // Route bắt đáy (Catch-all 404): Nếu gõ sai URL, tự động đưa về trang chủ
         { path: '*', element: <Navigate to="/" replace /> },
       ],

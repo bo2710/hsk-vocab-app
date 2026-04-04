@@ -1,3 +1,4 @@
+// filepath: src/components/forms/AddWordForm.tsx
 import React, { useState, useEffect } from 'react';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
@@ -6,6 +7,7 @@ import { Modal } from '../ui/Modal';
 import { useAddVocabulary } from '../../features/vocabulary/hooks/useAddVocabulary';
 import { AddVocabularyFormData } from '../../features/vocabulary/types';
 import { CONTEXT_TYPES } from '../../lib/constants';
+import { VocabularyMetadataFields } from './VocabularyMetadataFields';
 
 // BẢN ĐỒ DỊCH TỪ TYPE TIẾNG ANH SANG TIẾNG VIỆT ĐỂ CHỌN THỂ LOẠI
 const CONTEXT_TYPE_LABELS: Record<string, string> = {
@@ -19,7 +21,10 @@ const CONTEXT_TYPE_LABELS: Record<string, string> = {
   other: 'Khác (Other)'
 };
 
-const initialFormState: AddVocabularyFormData = {
+const initialFormState: AddVocabularyFormData & { 
+  preferred_audio_provider?: string; 
+  has_context_audio?: boolean; 
+} = {
   hanzi: '',
   pinyin: '',
   han_viet: '',
@@ -30,10 +35,16 @@ const initialFormState: AddVocabularyFormData = {
   context_type: 'sentence',
   learned_at: new Date().toISOString().split('T')[0],
   hsk_level: undefined,
+  hsk20_level: undefined,
+  hsk30_band: undefined,
+  hsk30_level: undefined,
+  source_scope: 'private',
+  preferred_audio_provider: '',
+  has_context_audio: false,
 };
 
 export const AddWordForm: React.FC = () => {
-  const [formData, setFormData] = useState<AddVocabularyFormData>(initialFormState);
+  const [formData, setFormData] = useState<typeof initialFormState>(initialFormState);
   
   const { 
     submit, 
@@ -67,23 +78,35 @@ export const AddWordForm: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    let processedValue: any = value;
+    // Xử lý type cast cho số
+    if (['hsk_level', 'hsk20_level', 'hsk30_band', 'hsk30_level'].includes(name)) {
+      processedValue = value ? Number(value) : undefined;
+    }
+    // Type checkbox override được xử lý ở wrapper component gửi value là boolean
+    if (typeof value === 'boolean') {
+      processedValue = value;
+    }
+
     setFormData(prev => ({ 
       ...prev, 
-      [name]: name === 'hsk_level' ? (value ? Number(value) : undefined) : value 
+      [name]: processedValue 
     }));
+    
     if (isSuccess || error) resetState();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await submit(formData);
+    const success = await submit(formData as AddVocabularyFormData);
     if (success) {
       setFormData(initialFormState); 
     }
   };
 
   const handleAddContextToExisting = async () => {
-    const success = await submitContextToExisting(formData);
+    const success = await submitContextToExisting(formData as AddVocabularyFormData);
     if (success) {
       setFormData(initialFormState);
     }
@@ -116,7 +139,7 @@ export const AddWordForm: React.FC = () => {
             {validationErrors.hanzi && <p className="text-sm text-red-500 mt-1">{validationErrors.hanzi}</p>}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Input 
                 label="Pinyin" 
@@ -137,23 +160,6 @@ export const AddWordForm: React.FC = () => {
                 onChange={handleChange} 
                 disabled={isLoading} 
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
-                Cấp độ HSK
-              </label>
-              <select 
-                name="hsk_level" 
-                value={formData.hsk_level || ''} 
-                onChange={handleChange} 
-                disabled={isLoading} 
-                className="w-full p-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-gray-100 transition-shadow"
-              >
-                <option value="" className="dark:bg-gray-800">Không phân loại</option>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(level => (
-                  <option key={level} value={level} className="dark:bg-gray-800">HSK {level}</option>
-                ))}
-              </select>
             </div>
           </div>
 
@@ -193,6 +199,13 @@ export const AddWordForm: React.FC = () => {
             />
           </div>
         </div>
+
+        {/* NHÚNG COMPONENT METADATA V2 VÀO ĐÂY */}
+        <VocabularyMetadataFields 
+          formData={formData} 
+          onChange={handleChange} 
+          disabled={isLoading} 
+        />
 
         <hr className="my-6 border-gray-200 dark:border-gray-800" />
 

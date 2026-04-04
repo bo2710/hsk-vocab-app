@@ -25,6 +25,7 @@ export interface DashboardData {
   levelProgress: LevelProgress[];
   recentWords: VocabularyItem[];
   weeklyActivity: WeeklyActivity[];
+  weakWords: VocabularyItem[];
   isLoading: boolean;
   error: Error | null;
 }

@@ -5,6 +5,7 @@ import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { CONTEXT_TYPES } from '../../lib/constants';
 import { useEditContext, useDeleteContext, EditContextFormData } from '../../features/contexts';
+import { InlineAudioPlayer } from '../audio';
 
 interface ContextItemProps {
   context: VocabularyContext;
@@ -130,10 +131,19 @@ const ContextItemComponent: React.FC<ContextItemProps> = ({ context, onUpdated, 
       
       <div className="flex justify-between items-start gap-4">
         <div className="flex-1 space-y-1">
-          <p className="text-gray-900 dark:text-gray-100 font-medium leading-relaxed">
-            {context.context_name}
-          </p>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex items-start gap-2">
+            <p className="text-gray-900 dark:text-gray-100 font-medium leading-relaxed">
+              {context.context_name}
+            </p>
+            <InlineAudioPlayer 
+              type="context" 
+              request={{ text: context.context_name, context_id: context.id, audio_text_override: context.audio_text_override }} 
+              size="sm" 
+              className="mt-0.5 shrink-0" 
+            />
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-2">
             <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-md uppercase tracking-wider font-semibold">
               {context.context_type}
             </span>

@@ -1,3 +1,4 @@
+// filepath: src/features/vocabulary/services/vocabularyEditService.ts
 import { vocabularyRepository } from '../../../lib/supabase/repositories/vocabularyRepository';
 import { VocabularyItem, VocabularyContext } from '../../../types/models';
 import { putVocabulary, getVocabulary, deleteVocabulary } from '../../../lib/indexeddb/vocabularyStore';
@@ -114,22 +115,16 @@ export const deleteVocabularyWord = async (id: string): Promise<boolean> => {
   }
 };
 
-// =========================================================
-// MỚI: HÀM XÓA HÀNG LOẠT (CẦN THIẾT CHO VOCABULARY PAGE)
-// =========================================================
 export const bulkDeleteVocabularyWords = async (ids: string[]): Promise<boolean> => {
-  // 1. Xóa cứng toàn bộ trên LocalDB ngay lập tức
   for (const id of ids) {
     await deleteVocabulary(id);
   }
 
   try {
-    // 2. Dùng in() để Xóa cứng (delete) một cục trên Supabase
     const { error } = await supabase.from('vocabulary_items').delete().in('id', ids);
     if (error) throw error;
     return true;
   } catch (error: any) {
-    // 3. Đẩy từng ID vào hàng đợi nếu mất mạng (Đảm bảo Type-safe với 'DELETE')
     for (const id of ids) {
       await addOperation({
         operationType: 'DELETE',

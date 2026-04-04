@@ -46,6 +46,15 @@ export default defineConfig({
       }
     })
   ],
+  // FIX: Cấu hình esbuild target sang esnext để hỗ trợ tính năng Top-level await của pdfjs-dist v5.x
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'esnext'
+    }
+  },
+  build: {
+    target: 'esnext'
+  },
   test: {
     globals: true,
     environment: 'node', // Using node environment for pure utility functions

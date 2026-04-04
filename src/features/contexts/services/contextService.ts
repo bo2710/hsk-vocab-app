@@ -1,3 +1,4 @@
+// filepath: src/features/contexts/services/contextService.ts
 import { contextRepository } from '../../../lib/supabase';
 import { validateVocabularyContext } from '../../../lib/validators';
 import { EditContextFormData, ContextModuleResult } from '../types';
@@ -47,7 +48,13 @@ export const contextService = {
           user_id: '',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          deleted_at: null // FIX TYPESCRIPT: Thêm trường deleted_at để thỏa mãn type VocabularyContext
+          deleted_at: null, // FIX TYPESCRIPT: Thêm trường deleted_at để thỏa mãn type VocabularyContext
+          // FIX TYPESCRIPT: Thêm các trường V2 metadata mặc định
+          context_text: null,
+          context_translation_vi: null,
+          audio_text_override: null,
+          source_scope: 'private',
+          source_reference_id: null
         };
         
         await addOperation({
@@ -94,6 +101,8 @@ export const contextService = {
           payload: { id, updates: updateData }
         });
         
+        // Trả về type ép kiểu since updateData is missing static full fields. 
+        // Logic cũ dùng ép kiểu 'as VocabularyContext' vẫn an toàn vì state list đã chứa old data
         return { 
           status: 'success', 
           data: { id, vocabulary_id: vocabularyId, ...updateData, deleted_at: null } as VocabularyContext 

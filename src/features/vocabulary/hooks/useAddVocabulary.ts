@@ -1,13 +1,14 @@
+// filepath: src/features/vocabulary/hooks/useAddVocabulary.ts
 import { useState } from 'react';
 import { addVocabulary, CreateVocabularyInput } from '../services/vocabularyService';
 import { contextService } from '../../contexts/services/contextService';
-import { vocabularyRepository } from '../../../lib/supabase/repositories/vocabularyRepository'; // Thêm để update
-import { putVocabulary } from '../../../lib/indexeddb/vocabularyStore'; // Thêm để update
+import { vocabularyRepository } from '../../../lib/supabase/repositories/vocabularyRepository';
+import { putVocabulary } from '../../../lib/indexeddb/vocabularyStore';
 import { VocabularyItem } from '../../../types/models';
 import { AddVocabularyFormData } from '../types';
 
 export interface UseAddVocabularyReturn {
-  submit: (formData: AddVocabularyFormData) => Promise<boolean>;
+  submit: (formData: AddVocabularyFormData & Record<string, any>) => Promise<boolean>;
   submitContextToExisting: (formData: AddVocabularyFormData) => Promise<boolean>;
   isLoading: boolean;
   error: string | null;
@@ -28,7 +29,7 @@ export const useAddVocabulary = (): UseAddVocabularyReturn => {
   const [duplicateData, setDuplicateData] = useState<VocabularyItem | null>(null);
   const isDuplicateMode = duplicateData !== null;
 
-  const submit = async (formData: AddVocabularyFormData): Promise<boolean> => {
+  const submit = async (formData: AddVocabularyFormData & Record<string, any>): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     setValidationErrors({});
@@ -47,6 +48,14 @@ export const useAddVocabulary = (): UseAddVocabularyReturn => {
         hsk_level: formData.hsk_level,
         tags: formData.tags,
         status: formData.status,
+        
+        // Truyền thẳng qua V2 Fields
+        hsk20_level: formData.hsk20_level,
+        hsk30_band: formData.hsk30_band,
+        hsk30_level: formData.hsk30_level,
+        source_scope: formData.source_scope,
+        preferred_audio_provider: formData.preferred_audio_provider || null,
+        has_context_audio: Boolean(formData.has_context_audio),
       } as CreateVocabularyInput; 
 
       await addVocabulary(vocabInput);
@@ -108,11 +117,10 @@ export const useAddVocabulary = (): UseAddVocabularyReturn => {
         throw result.error;
       }
 
-      // FIX LỖI SỐ LẦN GẶP: Tăng encounter_count lên 1 và gán trạng thái 'new' để nó hiện Badge cập nhật
       const currentEncounter = duplicateData.encounter_count || 0;
       const updateResult = await vocabularyRepository.updateVocabulary(duplicateData.id, {
          encounter_count: currentEncounter + 1,
-         status: 'new' // Set thành new để bật cờ "Mới" ngoài danh sách
+         status: 'new' 
       });
       
       if(updateResult.data) {

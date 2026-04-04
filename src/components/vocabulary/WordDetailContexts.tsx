@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { VocabularyContext } from '../../types/models';
 import { contextService } from '../../features/contexts/services/contextService';
+import { InlineAudioPlayer } from '../audio';
+import { useAudioPreferences } from '../../features/audio/hooks/useAudioPreferences';
+import { useAudioPlayback } from '../../features/audio/hooks/useAudioPlayback';
 
 // BẢN ĐỒ DỊCH TỪ TYPE TIẾNG ANH SANG TIẾNG VIỆT
 const CONTEXT_TYPE_LABELS: Record<string, string> = {
@@ -24,9 +27,29 @@ export const WordDetailContexts: React.FC<WordDetailContextsProps> = ({ contexts
   const [editData, setEditData] = useState<Partial<VocabularyContext>>({});
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Auto-play settings
+  const { settings } = useAudioPreferences();
+  const { playContext } = useAudioPlayback();
+  const [hasAutoPlayed, setHasAutoPlayed] = useState(false);
+
   useEffect(() => {
     setLocalContexts(initialContexts);
   }, [initialContexts]);
+
+  // Hỗ trợ tự động phát âm ngữ cảnh đầu tiên nếu cấu hình Settings bật
+  useEffect(() => {
+    if (settings.auto_play_context_audio && localContexts.length > 0 && !hasAutoPlayed) {
+      setHasAutoPlayed(true);
+      const timer = setTimeout(() => {
+        playContext({
+          text: localContexts[0].context_name,
+          context_id: localContexts[0].id,
+          audio_text_override: localContexts[0].audio_text_override
+        });
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [settings.auto_play_context_audio, localContexts, hasAutoPlayed, playContext]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa ngữ cảnh này?')) return;
@@ -46,7 +69,6 @@ export const WordDetailContexts: React.FC<WordDetailContextsProps> = ({ contexts
   };
 
   const handleSaveEdit = async () => {
-    // FIX LỖI: Sử dụng thuộc tính cứng từ state editData, chống lỗi undefinded
     if (!editingId || !editData.vocabulary_id) {
       alert('Không tìm thấy thông tin định danh của từ. Vui lòng tải lại trang.');
       return;
@@ -54,12 +76,10 @@ export const WordDetailContexts: React.FC<WordDetailContextsProps> = ({ contexts
 
     setIsProcessing(true);
     
-    // Ép Normalize NFC lúc Submit để làm sạch dữ liệu gõ từ bàn phím Mac/iOS
     const payload = {
       context_name: (editData.context_name || '').normalize('NFC').trim(),
       context_type: editData.context_type || 'sentence',
       context_note: (editData.context_note || '').normalize('NFC').trim(),
-      // Giữ nguyên định dạng ISO String để ghi xuống database
       learned_at: editData.learned_at || new Date().toISOString()
     };
 
@@ -92,7 +112,6 @@ export const WordDetailContexts: React.FC<WordDetailContextsProps> = ({ contexts
           <div key={ctx.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/50">
             
             {editingId === ctx.id ? (
-              /* GIAO DIỆN CHỈNH SỬA TRỰC TIẾP TRÊN LIST */
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Nội dung ngữ cảnh</label>
@@ -129,7 +148,6 @@ export const WordDetailContexts: React.FC<WordDetailContextsProps> = ({ contexts
                       type="date"
                       value={editData.learned_at ? new Date(editData.learned_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]} 
                       onChange={e => {
-                        // Chuyển ngược lại format ISO string để lưu vào Supabase
                         const newDate = new Date(e.target.value).toISOString();
                         setEditData({...editData, learned_at: newDate});
                       }}
@@ -155,18 +173,24 @@ export const WordDetailContexts: React.FC<WordDetailContextsProps> = ({ contexts
                 </div>
               </div>
             ) : (
-              /* GIAO DIỆN XEM CHI TIẾT CONTEXT */
               <>
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-2">
-                  <h4 className="font-semibold text-gray-900 dark:text-white text-base leading-relaxed break-words">{ctx.context_name}</h4>
+                  <div className="flex items-start gap-2">
+                    <h4 className="font-semibold text-gray-900 dark:text-white text-base leading-relaxed break-words">{ctx.context_name}</h4>
+                    <InlineAudioPlayer 
+                      type="context" 
+                      request={{ text: ctx.context_name, context_id: ctx.id, audio_text_override: ctx.audio_text_override }} 
+                      size="sm" 
+                      className="mt-0.5 shrink-0" 
+                    />
+                  </div>
+                  
                   <div className="flex items-center gap-2 shrink-0 mt-2 sm:mt-0">
                     {ctx.context_type && (
                       <span className="inline-flex items-center px-2.5 py-1 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded text-xs font-medium whitespace-nowrap">
-                        {/* Render tiếng Việt thân thiện */}
                         {CONTEXT_TYPE_LABELS[ctx.context_type] || ctx.context_type}
                       </span>
                     )}
-                    {/* NÚT ACTION */}
                     <div className="flex gap-1 ml-1 bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-0.5">
                       <button onClick={() => handleEditClick(ctx)} className="p-1.5 text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors rounded hover:bg-gray-100 dark:hover:bg-gray-700" title="Chỉnh sửa ngữ cảnh">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>

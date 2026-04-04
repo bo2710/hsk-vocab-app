@@ -1,3 +1,4 @@
+// filepath: src/components/vocabulary/VocabularyCard.tsx
 import React, { useState, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { VocabularyItem } from '../../types/models';
@@ -112,9 +113,26 @@ const VocabularyCardComponent: React.FC<VocabularyCardProps> = ({
           </h3>
           <PronounceButton text={item.hanzi} size="sm" />
         </div>
-        <span className="text-xs font-medium px-2 py-1 rounded bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 border border-primary-100 dark:border-primary-800">
-          HSK {item.hsk_level || '?'}
-        </span>
+        
+        {/* V2 METADATA BADGES - Hiển thị gọn gàng */}
+        <div className="flex flex-col items-end gap-1">
+          {item.hsk_level ? (
+             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 border border-primary-100 dark:border-primary-800">
+               HSK {item.hsk_level}
+             </span>
+          ) : null}
+          {item.hsk30_level ? (
+             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800">
+               v3: L{item.hsk30_level}
+             </span>
+          ) : (
+            item.hsk20_level ? (
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800">
+                v2: L{item.hsk20_level}
+              </span>
+            ) : null
+          )}
+        </div>
       </div>
       
       <p className="text-sm text-primary-600 dark:text-primary-400 font-medium mb-1">{item.pinyin}</p>
@@ -127,6 +145,12 @@ const VocabularyCardComponent: React.FC<VocabularyCardProps> = ({
               #{tag}
             </span>
           ))}
+          {/* Scope Indicator */}
+          {item.source_scope === 'public' && (
+             <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" title="Từ vựng công cộng">
+               🌍 Public
+             </span>
+          )}
         </div>
         {(item.encounter_count || 0) > 0 && (
           <div className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center ml-2 whitespace-nowrap" title="Số lần gặp">

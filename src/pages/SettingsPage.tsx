@@ -1,8 +1,14 @@
+// filepath: src/pages/SettingsPage.tsx
 import React from 'react';
 import { useAuth } from '../app/providers/AuthProvider';
 import { supabase } from '../lib/supabase/client';
 import { Button } from '../components/ui/Button';
-import { ExportImportSection, AppearanceSection, AppInfoSection } from '../components/settings';
+import { 
+  ExportImportSection, 
+  AppearanceSection, 
+  AppInfoSection,
+  AudioPreferencesSection 
+} from '../components/settings';
 
 const SettingsPage: React.FC = () => {
   const { user } = useAuth();
@@ -40,6 +46,11 @@ const SettingsPage: React.FC = () => {
         {/* Appearance Section */}
         <section>
           <AppearanceSection />
+        </section>
+
+        {/* Audio Preferences Section */}
+        <section>
+          <AudioPreferencesSection />
         </section>
 
         {/* Backup & Restore Section */}

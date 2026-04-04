@@ -1,3 +1,4 @@
+// filepath: src/features/vocabulary/hooks/useVocabularyFilters.ts
 import { useState, useMemo } from 'react';
 import { VocabularyItem } from '../../../types/models';
 import { FilterState, SortState, applyFilters, applySort } from '../../../lib/filters/vocabularyFilters';
