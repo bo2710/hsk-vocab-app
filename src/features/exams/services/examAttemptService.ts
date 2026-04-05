@@ -1,7 +1,10 @@
+// filepath: src/features/exams/services/examAttemptService.ts
+// CẦN CHỈNH SỬA
 import { examAttemptRepository } from '../../../lib/supabase';
 import { isNetworkError, generateUUID } from '../../../lib/network/networkHelper';
 import { queueExamAttemptCreate, queueExamAttemptSubmit } from '../../../lib/indexeddb/examAttemptStore';
 import { getOperations } from '../../../lib/indexeddb/operationQueueStore';
+import { detectVocabularyEncounters, saveExamVocabularyEncounters } from './examVocabularyEncounterService';
 import { 
   ExamAttempt, 
   ExamAttemptResponse,
@@ -27,7 +30,6 @@ export const examAttemptService = {
       return { status: 'success', data: result.data! };
     } catch (err: any) {
       if (isNetworkError(err) || (typeof navigator !== 'undefined' && !navigator.onLine)) {
-        // Fallback offline creation
         const fallbackAttempt: ExamAttempt = {
           id: generateUUID(),
           user_id: '',
@@ -55,12 +57,11 @@ export const examAttemptService = {
   async saveResponses(responses: Partial<ExamAttemptResponse>[]): Promise<ServiceResult<boolean>> {
     if (!responses.length) return { status: 'success', data: true };
     try {
-      if (typeof navigator !== 'undefined' && !navigator.onLine) return { status: 'success', data: true }; // Rely on IndexedDB Draft for offline logic
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return { status: 'success', data: true }; 
       const result = await examAttemptRepository.upsertResponses(responses);
       if (result.error) throw result.error;
       return { status: 'success', data: true };
     } catch (err: any) {
-      // Allow graceful failure if transient issue, draft will backup locally
       return { status: 'success', data: true };
     }
   },
@@ -78,47 +79,66 @@ export const examAttemptService = {
   async submitAttemptAndScore(payload: ExamSubmissionPayload): Promise<ServiceResult<ExamAttempt>> {
     const { attemptId, durationSeconds, bundle, responses } = payload;
     
-    // 1. Scoring Logic
     let totalScore = 0;
     let correctCount = 0;
     let wrongCount = 0;
-    let unansweredCount = bundle.questions.length - responses.length;
+    let unansweredCount = 0;
     let sectionScores: Record<string, number> = {};
 
-    const scoredResponses = responses.map(resp => {
-      const question = bundle.questions.find(q => q.id === resp.exam_question_id);
-      const isSubjective = !!resp.subjective_answer_text;
+    const scoredResponses = bundle.questions.map(question => {
+      let resp = responses.find(r => r.exam_question_id === question.id);
       
+      // FIX: Trả về đối tượng hoàn chỉnh nếu user bỏ trống câu
+      if (!resp) {
+        resp = {
+          exam_attempt_id: attemptId,
+          exam_question_id: question.id,
+          selected_option_id: null,
+          subjective_answer_text: null,
+          time_spent_seconds: 0, // Tránh lỗi type
+          answered_at: new Date().toISOString()
+        };
+      }
+
+      const isSubjective = question.question_type === 'writing' || question.question_type === 'subjective' || !bundle.options.some(o => o.exam_question_id === question.id);
+      
+      const hasAnswer = isSubjective ? !!resp.subjective_answer_text : !!resp.selected_option_id;
+
       let isCorrect: boolean | null = null;
       let scoreEarned = 0;
-
-      if (!question) return resp;
 
       if (sectionScores[question.exam_section_id] === undefined) {
         sectionScores[question.exam_section_id] = 0;
       }
 
-      if (!isSubjective && question.correct_option_id) {
-        isCorrect = resp.selected_option_id === question.correct_option_id;
-        if (isCorrect) {
-          scoreEarned = question.score_value || 1;
-          correctCount++;
-          totalScore += scoreEarned;
-          sectionScores[question.exam_section_id] += scoreEarned;
-        } else {
+      if (!hasAnswer) {
+        unansweredCount++;
+        isCorrect = null; // System hiểu là Unanswered
+      } else {
+        if (!isSubjective && question.correct_option_id) {
+          isCorrect = resp.selected_option_id === question.correct_option_id;
+          if (isCorrect) {
+            scoreEarned = question.score_value || 1;
+            correctCount++;
+            totalScore += scoreEarned;
+            sectionScores[question.exam_section_id] += scoreEarned;
+          } else {
+            wrongCount++;
+          }
+        } else if (!isSubjective && !question.correct_option_id) {
+          isCorrect = false;
           wrongCount++;
+        } else {
+          isCorrect = null; // Câu tự luận
         }
-      } else if (isSubjective) {
-        isCorrect = null;
       }
 
       return {
         ...resp,
         is_correct: isCorrect
-      };
+      } as Partial<ExamAttemptResponse>;
     });
 
-    // 2. Finalize Attempt Metadata
     const accuracy = (correctCount + wrongCount) > 0 
       ? Math.round((correctCount / (correctCount + wrongCount)) * 100) 
       : 0;
@@ -135,7 +155,40 @@ export const examAttemptService = {
       section_scores_json: sectionScores
     };
 
-    // 3. Submit Flow (Online vs Offline)
+    const processEncountersAsync = async () => {
+      try {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) return; 
+
+        const questionEncounters: { questionId: string, encounters: any[] }[] = [];
+        
+        for (const question of bundle.questions) {
+          const section = bundle.sections.find(s => s.id === question.exam_section_id) || null;
+          const qOptions = bundle.options.filter(o => o.exam_question_id === question.id);
+          
+          let readingPassage = null;
+          if (question.render_config_json && typeof question.render_config_json === 'object') {
+            const passageObj = question.render_config_json.passage as any;
+            if (passageObj && passageObj.text) {
+              readingPassage = passageObj.text;
+            }
+          }
+
+          const encounters = await detectVocabularyEncounters(question, section, qOptions, readingPassage);
+          if (encounters.length > 0) {
+            questionEncounters.push({ questionId: question.id, encounters });
+          }
+        }
+
+        if (questionEncounters.length > 0) {
+          await saveExamVocabularyEncounters(bundle.paper.id, questionEncounters);
+        }
+      } catch (err) {
+        console.error('Lỗi khi chạy ngầm lưu từ vựng bắt gặp:', err);
+      }
+    };
+
+    processEncountersAsync();
+
     try {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         throw new Error('Offline');
@@ -152,7 +205,6 @@ export const examAttemptService = {
 
     } catch (error: any) {
       if (isNetworkError(error) || (typeof navigator !== 'undefined' && !navigator.onLine)) {
-        // Enqueue offline submission
         await queueExamAttemptSubmit(attemptId, updates, scoredResponses);
         
         const optimisticAttempt = {
@@ -193,7 +245,6 @@ export const examAttemptService = {
       };
     } catch (error: any) {
       if (isNetworkError(error) || (typeof navigator !== 'undefined' && !navigator.onLine)) {
-         // Recover from Offline Queue if navigating to Result Page when disconnected
          const ops = await getOperations();
          const submitOp = ops.find(o => o.entityType === 'EXAM_ATTEMPT' && o.operationType === 'SUBMIT' && (o.payload as any).attemptId === attemptId);
          const createOp = ops.find(o => o.entityType === 'EXAM_ATTEMPT' && o.operationType === 'CREATE' && (o.payload as any).id === attemptId);

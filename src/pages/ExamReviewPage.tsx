@@ -1,4 +1,6 @@
 // filepath: src/pages/ExamReviewPage.tsx
+// CẦN CHỈNH SỬA
+import { useState } from 'react'; // Bỏ useParams để tránh react-hooks/rules-of-hooks nếu có
 import { useNavigate, useParams } from 'react-router-dom';
 import { useExamReview } from '../features/exams/hooks/useExamReview';
 import { useExamVocabularyEncounters } from '../features/exams/hooks/useExamVocabularyEncounters';
@@ -20,10 +22,14 @@ import {
 import { ReadingPassagePanel } from '../components/exams/ReadingPassagePanel';
 import { WritingPromptPanel } from '../components/exams/WritingPromptPanel';
 
+type ReviewTab = 'questions' | 'insights';
+
 export default function ExamReviewPage() {
   const navigate = useNavigate();
   const { paperId, attemptId } = useParams();
   
+  const [activeTab, setActiveTab] = useState<ReviewTab>('questions');
+
   const { 
     data, isLoading, error, 
     questions, currentQuestion, currentQuestionIndex, 
@@ -39,18 +45,15 @@ export default function ExamReviewPage() {
   const isReading = currentSection?.skill === 'reading';
   const isWriting = currentSection?.skill === 'writing';
 
-  // Chuyển về lấy đúng passage đã qua map xử lý, không dùng instruction thừa thãi
   const config = currentQuestion?.render_config_json as any;
   const readingPassage = isReading ? (config?.passage || currentQuestion?.prompt_rich_text) : null;
 
-  // Gọi hook quét Encounter Vocabulary cho câu hỏi hiện tại
   const { 
     encounters, 
     isLoading: isEncountersLoading, 
     error: encountersError 
   } = useExamVocabularyEncounters(currentQuestion, currentSection, currentOptions, readingPassage);
 
-  // Gọi hook tạo Mistake Insights toàn bài
   const {
     insights,
     recommendations,
@@ -58,7 +61,6 @@ export default function ExamReviewPage() {
     error: insightsError
   } = useExamMistakeInsights(data?.attempt, data?.responses, data?.bundle);
 
-  // Gọi hook trích xuất Weak Words từ lỗi sai
   const {
     weakWords,
     isLoading: isWeakWordsLoading,
@@ -92,11 +94,40 @@ export default function ExamReviewPage() {
         onToggleGrid={() => setIsGridOpen(prev => !prev)}
       />
 
-      <main className="max-w-4xl mx-auto p-4 md:p-6 md:mt-6">
+      {/* FIX LỖI TẠO TAB CHUYỂN ĐỔI GIỮA XEM CÂU HỎI VÀ PHÂN TÍCH */}
+      <div className="max-w-4xl mx-auto px-4 md:px-6 pt-4">
+        <div className="flex items-center gap-1 border-b border-gray-200 dark:border-gray-800">
+          <button 
+            onClick={() => setActiveTab('questions')}
+            className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+              activeTab === 'questions' 
+                ? 'border-primary-500 text-primary-600 dark:text-primary-400' 
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            Từng câu hỏi
+          </button>
+          <button 
+            onClick={() => setActiveTab('insights')}
+            className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${
+              activeTab === 'insights' 
+                ? 'border-primary-500 text-primary-600 dark:text-primary-400' 
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            Phân tích tổng thể
+            {(insights.length > 0 || weakWords.length > 0) && (
+              <span className="w-2 h-2 rounded-full bg-red-500"></span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      <main className="max-w-4xl mx-auto p-4 md:p-6 md:mt-4">
         
-        {/* Khối Tổng hợp & Insight (Hiển thị đầu trang để định hướng) */}
-        {currentQuestionIndex === 0 && (
-          <div className="space-y-6 mb-8">
+        {/* VIEW: PHÂN TÍCH CHUYÊN SÂU TOÀN BÀI */}
+        {activeTab === 'insights' && (
+          <div className="space-y-6 mb-8 animate-fade-in">
             <ExamMistakeInsightPanel
               insights={insights}
               recommendations={recommendations}
@@ -112,63 +143,64 @@ export default function ExamReviewPage() {
           </div>
         )}
 
-        {/* Khối Context chung (Passage / Image / Prompt) */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-6 border-b border-gray-200 dark:border-gray-800 pb-4">
-            <span className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 flex items-center justify-center font-bold text-sm">
-              {currentQuestionIndex + 1}
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              {currentSection?.section_name}
-            </span>
-          </div>
+        {/* VIEW: TỪNG CÂU HỎI */}
+        {activeTab === 'questions' && (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-6 border-b border-gray-200 dark:border-gray-800 pb-4">
+                <span className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 flex items-center justify-center font-bold text-sm">
+                  {currentQuestionIndex + 1}
+                </span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  {currentSection?.section_name}
+                </span>
+              </div>
 
-          {isReading && readingPassage && (
-            <div className="mb-6"><ReadingPassagePanel content={readingPassage} /></div>
-          )}
-          {isWriting && (
-            <WritingPromptPanel 
-              instruction={currentSection?.instructions || null}
-              content={currentQuestion.prompt_rich_text || currentQuestion.prompt_text}
-              imageUrl={config?.image_url}
-              wordLimit={config?.word_limit}
-            />
-          )}
+              {isReading && readingPassage && (
+                <div className="mb-6"><ReadingPassagePanel content={readingPassage} /></div>
+              )}
+              {isWriting && (
+                <WritingPromptPanel 
+                  instruction={currentSection?.instructions || null}
+                  content={currentQuestion.prompt_rich_text || currentQuestion.prompt_text}
+                  imageUrl={config?.image_url}
+                  wordLimit={config?.word_limit}
+                />
+              )}
 
-          {!isWriting && currentQuestion.prompt_text && (
-            <div className="prose dark:prose-invert max-w-none mb-6">
-              <p className="text-lg font-medium text-gray-800 dark:text-gray-200 leading-relaxed">
-                {currentQuestion.prompt_text}
-              </p>
+              {!isWriting && currentQuestion.prompt_text && (
+                <div className="prose dark:prose-invert max-w-none mb-6">
+                  <p className="text-lg font-medium text-gray-800 dark:text-gray-200 leading-relaxed">
+                    {currentQuestion.prompt_text}
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Khối Trả lời & So sánh đáp án */}
-        <ExamAnswerComparisonCard 
-          question={currentQuestion} 
-          options={currentOptions} 
-          response={currentResponse} 
-        />
+            <ExamAnswerComparisonCard 
+              question={currentQuestion} 
+              options={currentOptions} 
+              response={currentResponse} 
+            />
 
-        {/* Khối Bổ trợ: Transcript, Giải thích, và TỪ VỰNG (Encounter cho 1 câu cụ thể) */}
-        <div className="space-y-6 mt-8">
-          <ExamVocabularyEncounterPanel 
-            encounters={encounters} 
-            isLoading={isEncountersLoading} 
-            error={encountersError} 
-          />
-          <ExamTranscriptPanel transcript={currentQuestion.transcript_text || currentSection?.transcript_text || null} />
-          <ExamExplanationPanel explanation={currentQuestion.explanation_text || currentSection?.explanation_text || null} />
-        </div>
+            <div className="space-y-6 mt-8">
+              <ExamVocabularyEncounterPanel 
+                encounters={encounters} 
+                isLoading={isEncountersLoading} 
+                error={encountersError} 
+              />
+              <ExamTranscriptPanel transcript={currentQuestion.transcript_text || currentSection?.transcript_text || null} />
+              <ExamExplanationPanel explanation={currentQuestion.explanation_text || currentSection?.explanation_text || null} />
+            </div>
 
-        {/* Chuyển trang */}
-        <ExamReviewNavigator 
-          currentIndex={currentQuestionIndex} 
-          total={questions.length} 
-          onNext={goNext} 
-          onPrev={goPrev} 
-        />
+            <ExamReviewNavigator 
+              currentIndex={currentQuestionIndex} 
+              total={questions.length} 
+              onNext={goNext} 
+              onPrev={goPrev} 
+            />
+          </div>
+        )}
       </main>
 
       <ExamReviewQuestionGridPanel 

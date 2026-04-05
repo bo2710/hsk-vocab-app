@@ -28,10 +28,11 @@ export const ExamAnswerComparisonCard: React.FC<Props> = ({ question, options, r
     );
   }
 
-  // Trắc nghiệm
+  // FIX LỖI "KHÔNG CHỌN GÌ VẪN BÁO ĐÚNG" (UI LEVEL)
+  // Trong trường hợp bỏ trống, response?.is_correct sẽ là null. Component không được tự động mặc định null = true.
   const isCorrect = response?.is_correct === true;
   const isWrong = response?.is_correct === false;
-  const isUnanswered = response?.selected_option_id === null || response === null;
+  const isUnanswered = response?.is_correct === null || response?.selected_option_id === null || !response;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm mt-6">
@@ -43,7 +44,7 @@ export const ExamAnswerComparisonCard: React.FC<Props> = ({ question, options, r
         <span className={`px-3 py-1 rounded-full text-xs font-bold ${
           isCorrect ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
           isWrong ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' :
-          isUnanswered ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' : 'bg-gray-100 text-gray-600'
+          'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
         }`}>
           {isCorrect ? 'Đúng' : isWrong ? 'Sai' : 'Bỏ qua'}
         </span>
@@ -51,7 +52,8 @@ export const ExamAnswerComparisonCard: React.FC<Props> = ({ question, options, r
 
       <div className="space-y-3">
         {options.map(opt => {
-          const isUserChoice = response?.selected_option_id === opt.id;
+          // Bỏ trống thì không option nào được tính là user choice
+          const isUserChoice = !isUnanswered && response?.selected_option_id === opt.id;
           const isCorrectChoice = opt.is_correct;
 
           let borderClass = "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 opacity-60";

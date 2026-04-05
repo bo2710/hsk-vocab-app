@@ -1,3 +1,5 @@
+// filepath: src/lib/analytics/examReviewRecommendationEngine.ts
+// CẦN CHỈNH SỬA
 import { AggregateMistakeInsight, ReviewRecommendation, ExamPaperContentBundle } from '../../features/exams/types';
 
 export const generateRecommendations = (
@@ -6,15 +8,7 @@ export const generateRecommendations = (
 ): ReviewRecommendation[] => {
   const recommendations: ReviewRecommendation[] = [];
 
-  if (!insights.length) {
-    return [{
-      id: 'rec-all-good',
-      action_text: 'Duy trì phong độ hiện tại',
-      rationale: 'Bạn làm bài khá tốt, không phát hiện lỗi sai hệ thống nghiêm trọng nào.',
-      priority: 'low'
-    }];
-  }
-
+  // FIX LỖI: Chỉ khen khi mảng recommendations cuối cùng thực sự rỗng
   insights.forEach((insight, index) => {
     if (insight.insight_type === 'unanswered') {
       recommendations.push({
@@ -48,7 +42,15 @@ export const generateRecommendations = (
     }
   });
 
-  // Deduplicate logically if needed, sort by priority
+  if (recommendations.length === 0) {
+    return [{
+      id: 'rec-all-good',
+      action_text: 'Duy trì phong độ hiện tại',
+      rationale: 'Bạn làm bài khá tốt, không phát hiện lỗi sai hệ thống nghiêm trọng nào.',
+      priority: 'low'
+    }];
+  }
+
   const uniqueRecommendations = Array.from(new Map(recommendations.map(item => [item.action_text, item])).values());
 
   uniqueRecommendations.sort((a, b) => {

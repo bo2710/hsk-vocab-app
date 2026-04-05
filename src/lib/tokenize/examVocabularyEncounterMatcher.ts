@@ -1,3 +1,5 @@
+// filepath: src/lib/tokenize/examVocabularyEncounterMatcher.ts
+// CẦN CHỈNH SỬA
 import { VocabularyItem } from '../../types/models';
 import { TextSegment, EncounterRole } from './examContentTokenizer';
 
@@ -37,11 +39,23 @@ export const matchVocabularyInText = (
     });
 
     if (count > 0) {
-      results.set(vocab.id, {
-        vocabulary: vocab,
-        roles: Array.from(roles),
-        count
-      });
+      // FIX BUG LẶP TỪ: Nhóm các từ vựng theo chữ Hán thay vì vocab.id. 
+      // Điều này ngăn chặn việc hiển thị trùng lặp nếu trong từ điển cá nhân của user có chứa nhiều từ bị trùng chữ Hán.
+      const hanziNorm = vocab.hanzi_normalized || searchTarget.replace(/\s+/g, '');
+      
+      if (results.has(hanziNorm)) {
+        const existing = results.get(hanziNorm)!;
+        existing.count += count;
+        Array.from(roles).forEach(r => {
+          if (!existing.roles.includes(r)) existing.roles.push(r);
+        });
+      } else {
+        results.set(hanziNorm, {
+          vocabulary: vocab,
+          roles: Array.from(roles),
+          count
+        });
+      }
     }
   });
 

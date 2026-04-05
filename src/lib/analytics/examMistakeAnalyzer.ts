@@ -1,3 +1,5 @@
+// filepath: src/lib/analytics/examMistakeAnalyzer.ts
+// CẦN CHỈNH SỬA
 import { ExamAttempt, ExamAttemptResponse, ExamPaperContentBundle, AggregateMistakeInsight } from '../../features/exams/types';
 
 export const analyzeMistakes = (
@@ -8,9 +10,21 @@ export const analyzeMistakes = (
   const insights: AggregateMistakeInsight[] = [];
   if (!attempt || !responses.length || !bundle.questions.length) return insights;
 
-  // 1. Analyze Unanswered Questions
   const totalQuestions = bundle.questions.length;
-  const unansweredCount = totalQuestions - responses.length;
+  let wrongCount = 0;
+  let unansweredCount = 0;
+
+  // FIX LỖI: Đếm trực tiếp từ mảng responses dựa trên is_correct === null
+  responses.forEach(resp => {
+    if (resp.is_correct === false) wrongCount++;
+    if (resp.is_correct === null && !resp.subjective_answer_text) unansweredCount++;
+  });
+
+  // Bù trừ nếu có câu hoàn toàn không có trong mảng responses
+  const missingCount = Math.max(0, totalQuestions - responses.length);
+  unansweredCount += missingCount;
+
+  // 1. Analyze Unanswered Questions
   if (unansweredCount > 0) {
     const percentage = Math.round((unansweredCount / totalQuestions) * 100);
     insights.push({
@@ -39,11 +53,18 @@ export const analyzeMistakes = (
     }
   });
 
+  // Cộng thêm các câu bị thiếu hẳn vào tổng số câu của section
+  bundle.questions.forEach(q => {
+    const hasResp = responses.some(r => r.exam_question_id === q.id);
+    if (!hasResp && sectionStats[q.exam_section_id]) {
+      sectionStats[q.exam_section_id].total += 1;
+    }
+  });
+
   const weakSections: string[] = [];
   bundle.sections.forEach(sec => {
     const stats = sectionStats[sec.id];
-    // We only analyze sections where the user actually answered questions or was supposed to
-    const totalAssigned = bundle.questions.filter(q => q.exam_section_id === sec.id).length;
+    const totalAssigned = stats ? stats.total : 0;
     
     if (totalAssigned > 0) {
       const correct = stats ? stats.correct : 0;
@@ -63,12 +84,12 @@ export const analyzeMistakes = (
     }
   });
 
-  // 3. Analyze Time Management (Simple heuristic: high time spent but still incorrect)
+  // 3. Analyze Time Management
   let strugglingTime = 0;
   let strugglingCount = 0;
   responses.forEach(resp => {
-    if (resp.is_correct === false && resp.time_spent_seconds > 60) {
-      strugglingTime += resp.time_spent_seconds;
+    if (resp.is_correct === false && (resp.time_spent_seconds || 0) > 60) {
+      strugglingTime += (resp.time_spent_seconds || 0);
       strugglingCount++;
     }
   });
@@ -83,7 +104,6 @@ export const analyzeMistakes = (
     });
   }
 
-  // Sort by severity (high first)
   insights.sort((a, b) => {
     const score = { high: 3, medium: 2, low: 1 };
     return score[b.severity] - score[a.severity];

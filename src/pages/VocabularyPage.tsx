@@ -1,4 +1,5 @@
 // filepath: src/pages/VocabularyPage.tsx
+// CẦN CHỈNH SỬA
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVocabularyList } from '../features/vocabulary/hooks/useVocabularyList';
@@ -8,6 +9,7 @@ import { VocabularyList } from '../components/vocabulary/VocabularyList';
 import { SearchBar } from '../components/ui/SearchBar';
 import { FilterBar } from '../components/ui/FilterBar';
 import { bulkDeleteVocabularyWords } from '../features/vocabulary/services/vocabularyEditService';
+import { publicVocabularyContributionService } from '../features/publicVocabulary/services/publicVocabularyContributionService';
 
 export const VocabularyPage: React.FC = () => {
   const navigate = useNavigate();
@@ -24,14 +26,12 @@ export const VocabularyPage: React.FC = () => {
     isFilterActive 
   } = useVocabularyFilters(searchedItems);
 
-  // ==================================================
-  // STATE MỚI: QUẢN LÝ CHẾ ĐỘ CHỌN & XÓA HÀNG LOẠT
-  // ==================================================
+  // STATE QUẢN LÝ CHẾ ĐỘ CHỌN HÀNG LOẠT
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
-  // Thêm một state để điều khiển việc collapse/expand bộ lọc nâng cao
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   const isSearchOrFilterActive = searchQuery.trim().length > 0 || isFilterActive;
@@ -40,29 +40,25 @@ export const VocabularyPage: React.FC = () => {
     console.warn("Lỗi tải kho từ (Đã bị ẩn trên UI):", error);
   }
 
-  // Bật/Tắt chế độ chọn
   const handleToggleSelectMode = () => {
     setIsSelectMode(!isSelectMode);
-    setSelectedIds([]); // Thoát là reset các mục đã chọn
+    setSelectedIds([]); 
   };
 
-  // Toggle chọn một từ vựng
   const handleToggleSelectWord = (id: string) => {
     setSelectedIds(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
 
-  // Nút Chọn tất cả
   const handleSelectAll = () => {
     if (selectedIds.length === finalItems.length && finalItems.length > 0) {
-      setSelectedIds([]); // Bỏ chọn hết
+      setSelectedIds([]); 
     } else {
-      setSelectedIds(finalItems.map(item => item.id)); // Chọn tất cả item đang hiển thị
+      setSelectedIds(finalItems.map(item => item.id)); 
     }
   };
 
-  // Xử lý Xóa Hàng Loạt
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
     if (!window.confirm(`Bạn có chắc chắn muốn XÓA VĨNH VIỄN ${selectedIds.length} từ vựng đã chọn không? Hành động này không thể hoàn tác.`)) return;
@@ -70,11 +66,48 @@ export const VocabularyPage: React.FC = () => {
     setIsDeleting(true);
     try {
       await bulkDeleteVocabularyWords(selectedIds);
-      // Ép tải lại trang ngay lập tức để làm sạch hoàn toàn cache và UI (tránh zombie)
       window.location.reload(); 
     } catch (err) {
       alert("Đã xảy ra lỗi khi xóa.");
       setIsDeleting(false);
+    }
+  };
+
+  const handleBulkPublish = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`Bạn có chắc chắn muốn ĐĂNG ${selectedIds.length} từ vựng này lên kho cộng đồng để chờ duyệt không?`)) return;
+
+    setIsPublishing(true);
+    try {
+      const itemsToPublish = finalItems.filter(item => selectedIds.includes(item.id));
+      let successCount = 0;
+      
+      for (const item of itemsToPublish) {
+         const payload = {
+            normalized_hanzi: item.hanzi_normalized,
+            payload: {
+               canonical_hanzi: item.hanzi,
+               pinyin: item.pinyin,
+               meaning_vi: item.meaning_vi,
+               han_viet: item.han_viet,
+               note: item.note,
+               example: item.example,
+               hsk20_level: item.hsk20_level,
+               hsk30_level: item.hsk30_level,
+               hsk30_band: item.hsk30_band,
+               tags: item.tags?.join(', ') || ''
+            }
+         };
+         await publicVocabularyContributionService.submitContribution(payload as any, true);
+         successCount++;
+      }
+      
+      alert(`Đã gửi thành công ${successCount} từ vựng! Bạn có thể theo dõi tiến độ duyệt tại mục Đóng góp của tôi ở màn hình Từ vựng cộng đồng.`);
+      handleToggleSelectMode();
+    } catch (err) {
+      alert("Đã xảy ra lỗi khi đăng từ vựng.");
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -92,7 +125,6 @@ export const VocabularyPage: React.FC = () => {
             />
           </div>
           
-          {/* NÚT BẬT CHẾ ĐỘ CHỌN NHIỀU */}
           <button
             onClick={handleToggleSelectMode}
             className={`p-2.5 rounded-xl border transition-colors shrink-0 shadow-sm ${
@@ -107,7 +139,6 @@ export const VocabularyPage: React.FC = () => {
         </div>
       </div>
 
-      {/* THANH CÔNG CỤ DÀNH RIÊNG CHO CHẾ ĐỘ CHỌN */}
       {isSelectMode ? (
         <div className="bg-primary-50/80 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-sm animate-slide-up">
           <label className="flex items-center gap-3 cursor-pointer pl-2">
@@ -121,17 +152,24 @@ export const VocabularyPage: React.FC = () => {
               Đã chọn {selectedIds.length} / {finalItems.length}
             </span>
           </label>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button 
               onClick={handleToggleSelectMode} 
-              disabled={isDeleting} 
+              disabled={isDeleting || isPublishing} 
               className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 transition-colors"
             >
               Hủy
             </button>
             <button 
+              onClick={handleBulkPublish} 
+              disabled={selectedIds.length === 0 || isDeleting || isPublishing} 
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm"
+            >
+              {isPublishing ? 'Đang đăng...' : 'Đăng lên cộng đồng'}
+            </button>
+            <button 
               onClick={handleBulkDelete} 
-              disabled={selectedIds.length === 0 || isDeleting} 
+              disabled={selectedIds.length === 0 || isDeleting || isPublishing} 
               className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors shadow-sm"
             >
               {isDeleting ? 'Đang xóa...' : 'Xóa đã chọn'}
@@ -155,7 +193,6 @@ export const VocabularyPage: React.FC = () => {
       )}
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm min-h-[500px] p-4 md:p-6 border border-gray-100 dark:border-gray-700">
-        
         {!isLoading && items.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center space-y-4 animate-fade-in">
             <div className="w-24 h-24 bg-primary-50 dark:bg-primary-900/20 text-primary-500 rounded-full flex items-center justify-center mb-2 shadow-inner">
@@ -176,13 +213,11 @@ export const VocabularyPage: React.FC = () => {
             isLoading={isLoading}
             error={null} 
             hasActiveFilters={isSearchOrFilterActive}
-            // Props truyền xuống cho chế độ chọn
             isSelectMode={isSelectMode}
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelectWord}
           />
         )}
-        
       </div>
     </div>
   );

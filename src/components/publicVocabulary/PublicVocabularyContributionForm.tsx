@@ -1,4 +1,5 @@
 // filepath: src/components/publicVocabulary/PublicVocabularyContributionForm.tsx
+// CẦN CHỈNH SỬA
 import React, { useState } from 'react';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
@@ -100,6 +101,32 @@ export const PublicVocabularyContributionForm: React.FC<ContributionFormProps> =
             disabled={isSubmitting} 
           />
           {validationErrors.meaning_vi && <p className="text-sm text-red-500 mt-1">{validationErrors.meaning_vi}</p>}
+        </div>
+
+        {/* BỔ SUNG TRƯỜNG NHẬP NGỮ CẢNH/VÍ DỤ */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Textarea 
+              label="Ví dụ / Ngữ cảnh" 
+              name="example" 
+              rows={2}
+              placeholder="Ví dụ chứa từ vựng (Tiếng Trung)"
+              value={formData.example} 
+              onChange={handleChange} 
+              disabled={isSubmitting} 
+            />
+          </div>
+          <div>
+            <Textarea 
+              label="Dịch nghĩa ví dụ" 
+              name="example_translation_vi" 
+              rows={2}
+              placeholder="Bản dịch của ví dụ"
+              value={formData.example_translation_vi} 
+              onChange={handleChange} 
+              disabled={isSubmitting} 
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-800/50">
